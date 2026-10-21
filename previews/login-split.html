@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Login 50/50 — BeeDock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --mel: #F5A400; --mel-600: #D98B00; --mel-100: #FFF1CC;
+  --propolis: #1E160C; --cera: #FBF6EA; --favo: #F3EAD3;
+  --background: var(--cera); --foreground: var(--propolis);
+  --card: #FFFDF7; --muted-foreground: #6B5B43; --border: #E6D9BA;
+  --ring: var(--mel-600);
+  --entrou: #2F7D32; --entrou-bg: #E3F2DF;
+  --saiu: #B3261E; --saiu-bg: #FBE3DF;
+  --radius: 14px;
+  --hex: polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);
+  --tape: repeating-linear-gradient(-45deg, var(--mel) 0 12px, var(--propolis) 12px 24px);
+  --font-display: "Archivo", sans-serif;
+  --font-body: "Atkinson Hyperlegible", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --background: #15100A; --foreground: #F7EEDC; --card: #201810;
+    --muted-foreground: #BCA987; --border: #3A2D1E;
+    --entrou: #7BC67E; --entrou-bg: #1D2E1B; --saiu: #F2867C; --saiu-bg: #3A1A16;
+  }
+}
+:root[data-theme="dark"] {
+  --background: #15100A; --foreground: #F7EEDC; --card: #201810;
+  --muted-foreground: #BCA987; --border: #3A2D1E;
+  --entrou: #7BC67E; --entrou-bg: #1D2E1B; --saiu: #F2867C; --saiu-bg: #3A1A16;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  min-height: 100dvh; background: var(--background); color: var(--foreground);
+  font: 16px/1.5 var(--font-body); -webkit-font-smoothing: antialiased;
+}
+
+/* ===== Split ===== */
+.split { display: grid; min-height: 100dvh; grid-template-columns: 1fr; }
+@media (min-width: 900px) { .split { grid-template-columns: 1fr 1fr; } }
+
+/* ===== Lado da marca (Própolis) ===== */
+.brand {
+  position: relative; overflow: hidden; isolation: isolate;
+  background: var(--propolis); color: #F7EEDC;
+  display: grid; grid-template-rows: auto 1fr auto; gap: 32px;
+  padding: 24px 16px 28px;
+}
+@media (min-width: 900px) { .brand { padding: 40px 56px 44px; } }
+.brand::before { /* faixa zebrada da doca */
+  content: ""; position: absolute; inset: 0 0 auto 0; height: 8px; background: var(--tape);
+}
+.brand::after { /* brilho de mel no canto */
+  content: ""; position: absolute; z-index: -1; right: -20%; bottom: -30%;
+  width: 80%; aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(245,164,0,.28), transparent);
+}
+
+.logo { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.logo .hex {
+  width: 36px; height: 41px; clip-path: var(--hex); background: var(--mel); color: var(--propolis);
+  display: grid; place-items: center; font: 900 14px var(--font-display);
+}
+.logo b { font: 900 22px var(--font-display); font-stretch: 125%; letter-spacing: -.01em; }
+.logo b span { color: var(--mel); }
+
+.pitch { align-self: center; max-width: 560px; display: none; position: relative; z-index: 1; }
+@media (min-width: 900px) { .pitch { display: block; } }
+.pitch h2 {
+  margin: 0 0 16px; font: 900 clamp(32px, 3.1vw, 46px)/.98 var(--font-display);
+  font-stretch: 125%; letter-spacing: -.02em;
+}
+.pitch h2 em { font-style: normal; color: var(--mel); }
+.pitch p { margin: 0; color: #CDBB98; font-size: 17px; max-width: 36ch; }
+
+.facts { display: none; gap: 12px; list-style: none; margin: 0; padding: 0; }
+@media (min-width: 900px) { .facts { display: grid; } }
+.facts li { display: flex; align-items: center; gap: 12px; color: #E8DCC2; font-size: 15px; }
+.facts li i {
+  width: 14px; height: 16px; clip-path: var(--hex); background: var(--mel); flex: none;
+}
+
+.mobile-tag { margin: 0; color: #CDBB98; font-size: 15px; max-width: 24ch; }
+@media (min-width: 900px) { .mobile-tag { display: none; } }
+
+/* favo: colmeia de hexágonos ao fundo */
+.comb {
+  position: absolute; z-index: -1; right: -60px; bottom: -70px;
+  display: grid; grid-template-columns: repeat(5, 76px); gap: 6px 4px;
+  opacity: .9; pointer-events: none;
+}
+.comb i {
+  width: 76px; height: 86px; clip-path: var(--hex);
+  background: rgba(245,164,0,.07); border: 0;
+  animation: fill 900ms cubic-bezier(.2,.7,.2,1) both;
+}
+.comb i:nth-child(10n+6), .comb i:nth-child(10n+7), .comb i:nth-child(10n+8),
+.comb i:nth-child(10n+9), .comb i:nth-child(10n+10) { translate: 40px 0; }
+.comb i.on { background: var(--mel); }
+.comb i.half { background: rgba(245,164,0,.35); }
+@media (max-width: 899px) {
+  .comb { top: auto; bottom: -60px; translate: 0 0; right: -90px; grid-template-columns: repeat(4, 48px); }
+  .comb i { width: 48px; height: 54px; }
+  .comb i:nth-child(n) { translate: 0 0; }
+  .comb i:nth-child(8n+5), .comb i:nth-child(8n+6), .comb i:nth-child(8n+7), .comb i:nth-child(8n+8) { translate: 26px 0; }
+}
+@keyframes fill { from { opacity: 0; scale: .6; } }
+
+/* ===== Lado do formulário ===== */
+.form-side {
+  display: grid; align-content: center; justify-items: center;
+  padding: 32px 16px 48px;
+}
+@media (min-width: 900px) { .form-side { padding: 48px 56px; } }
+.panel { width: 100%; max-width: 400px; display: grid; gap: 28px; animation: rise 600ms 120ms cubic-bezier(.2,.7,.2,1) both; }
+@keyframes rise { from { opacity: 0; translate: 0 12px; } }
+
+.panel header { display: grid; gap: 8px; }
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 8px; width: fit-content;
+  font: 800 12px var(--font-display); letter-spacing: .12em; text-transform: uppercase; color: var(--muted-foreground);
+}
+.eyebrow::before { content: ""; width: 9px; height: 10px; background: var(--mel); clip-path: var(--hex); }
+h1 { margin: 0; font: 900 40px/1 var(--font-display); font-stretch: 125%; letter-spacing: -.02em; }
+.panel header p { margin: 0; color: var(--muted-foreground); }
+
+form { display: grid; gap: 16px; }
+.field { display: grid; gap: 6px; }
+.field label { font-weight: 700; font-size: 15px; }
+.field input {
+  height: 48px; padding: 0 14px; border-radius: 10px;
+  border: 1.5px solid var(--border); background: var(--card); color: var(--foreground);
+  font: 16px var(--font-body); transition: border-color .15s, box-shadow .15s;
+}
+.field input:focus-visible { outline: none; border-color: var(--ring); box-shadow: 0 0 0 4px rgba(245,164,0,.25); }
+.field input[aria-invalid="true"] { border-color: var(--saiu); }
+
+.msg { margin: 0; padding: 10px 12px; border-radius: 10px; font-weight: 700; font-size: 14px; }
+.msg.ok { background: var(--entrou-bg); color: var(--entrou); }
+.msg.err { background: var(--saiu-bg); color: var(--saiu); }
+
+.btn {
+  height: 52px; border: 0; border-radius: 12px; cursor: pointer;
+  background: var(--propolis); color: #FBF6EA;
+  font: 800 16px var(--font-display); font-stretch: 112%; letter-spacing: .01em;
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  transition: transform .12s, background .15s;
+}
+:root[data-theme="dark"] .btn { background: var(--mel); color: var(--propolis); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn { background: var(--mel); color: var(--propolis); } }
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+.btn:focus-visible { outline: 3px solid var(--ring); outline-offset: 3px; }
+.btn[disabled] { opacity: .7; cursor: progress; transform: none; }
+.btn .spin { width: 16px; height: 18px; clip-path: var(--hex); background: currentColor; animation: spin 900ms linear infinite; }
+@keyframes spin { to { rotate: 360deg; } }
+
+.foot { color: var(--muted-foreground); font-size: 13px; text-align: center; margin: 0; }
+
+/* ===== Barra de estados do preview ===== */
+body { padding-bottom: 72px; }
+@media (min-width: 900px) { body { padding-bottom: 0; } }
+.states {
+  position: fixed; left: 50%; bottom: 12px; translate: -50% 0; z-index: 10;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; max-width: calc(100vw - 32px);
+  padding: 4px; border-radius: 999px; background: rgba(30,22,12,.88); backdrop-filter: blur(6px);
+  font: 700 12px var(--font-body);
+}
+.states button {
+  border: 0; border-radius: 999px; padding: 7px 12px; cursor: pointer;
+  background: transparent; color: #E8DCC2; font: inherit;
+}
+.states button[aria-pressed="true"] { background: var(--mel); color: var(--propolis); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="split">
+  <aside class="brand" aria-label="BeeDock">
+    <div class="logo"><span class="hex">BD</span><b>Bee<span>Dock</span></b></div>
+
+    <div class="pitch">
+      <h2>Sua estamparia organizada como <em>uma colmeia.</em></h2>
+      <p>Pedidos, entradas e saídas no mesmo lugar, do balcão ao celular.</p>
+    </div>
+    <p class="mobile-tag">Pedidos, entradas e saídas da sua estamparia em um só lugar.</p>
+
+    <ul class="facts">
+      <li><i></i>Pedidos com prazo e sinal à vista</li>
+      <li><i></i>Caixa do mês sempre fechado</li>
+      <li><i></i>Cada alteração registrada na auditoria</li>
+    </ul>
+
+    <div class="comb" aria-hidden="true" id="comb"></div>
+  </aside>
+
+  <main class="form-side">
+    <div class="panel">
+      <header>
+        <span class="eyebrow">Área do cliente</span>
+        <h1>Entrar</h1>
+        <p>Use o e-mail e a senha da sua conta.</p>
+      </header>
+
+      <form id="form" novalidate>
+        <p class="msg ok" id="notice" role="status" hidden>Conta criada. Entre com seu e-mail e senha.</p>
+        <div class="field">
+          <label for="email">E-mail</label>
+          <input id="email" name="email" type="email" inputmode="email" autocomplete="email" required>
+        </div>
+        <div class="field">
+          <label for="password">Senha</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required>
+        </div>
+        <p class="msg err" id="error" role="alert" hidden>E-mail ou senha incorretos.</p>
+        <button class="btn" id="submit" type="submit">Entrar</button>
+      </form>
+
+      <p class="foot">Acesso criado pelo administrador da sua empresa.</p>
+    </div>
+  </main>
+</div>
+
+<nav class="states" aria-label="Estados do preview">
+  <button type="button" data-state="padrao" aria-pressed="true">Padrão</button>
+  <button type="button" data-state="erro" aria-pressed="false">Erro</button>
+  <button type="button" data-state="bloqueado" aria-pressed="false">Bloqueado</button>
+  <button type="button" data-state="convite" aria-pressed="false">Conta criada</button>
+  <button type="button" data-state="enviando" aria-pressed="false">Enviando</button>
+  <button type="button" data-theme-toggle aria-pressed="false">Tema escuro</button>
+</nav>
+
+<script>
+// favo ao fundo: algumas células "cheias" de mel
+const comb = document.getElementById("comb");
+const filled = new Set([2, 8, 9, 13, 19, 24, 27]);
+const half = new Set([3, 12, 18, 22, 28]);
+for (let i = 0; i < 20; i++) {
+  const c = document.createElement("i");
+  if (filled.has(i)) c.className = "on";
+  else if (half.has(i)) c.className = "half";
+  c.style.animationDelay = `${i * 25}ms`;
+  comb.appendChild(c);
+}
+
+const $ = (id) => document.getElementById(id);
+const states = {
+  padrao: () => {},
+  erro: () => { $("error").hidden = false; $("error").textContent = "E-mail ou senha incorretos."; $("email").value = "admin@primestudio.com.br"; $("password").setAttribute("aria-invalid", "true"); },
+  bloqueado: () => { $("error").hidden = false; $("error").textContent = "Conta bloqueada por excesso de tentativas. Tente novamente em 15 minutos."; $("email").value = "admin@primestudio.com.br"; },
+  convite: () => { $("notice").hidden = false; $("email").value = "ana@primestudio.com.br"; $("password").focus(); },
+  enviando: () => { $("email").value = "admin@primestudio.com.br"; $("password").value = "••••••••••"; $("submit").disabled = true; $("submit").innerHTML = '<span class="spin" aria-hidden="true"></span>Entrando…'; },
+};
+function reset() {
+  $("notice").hidden = true; $("error").hidden = true;
+  $("email").value = ""; $("password").value = ""; $("password").removeAttribute("aria-invalid");
+  $("submit").disabled = false; $("submit").textContent = "Entrar";
+}
+document.querySelectorAll("[data-state]").forEach((b) => b.addEventListener("click", () => {
+  document.querySelectorAll("[data-state]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  reset(); states[b.dataset.state]();
+}));
+document.querySelector("[data-theme-toggle]").addEventListener("click", (e) => {
+  const dark = document.documentElement.dataset.theme !== "dark";
+  document.documentElement.dataset.theme = dark ? "dark" : "light";
+  e.currentTarget.setAttribute("aria-pressed", String(dark));
+});
+$("form").addEventListener("submit", (e) => { e.preventDefault(); document.querySelector('[data-state="enviando"]').click(); });
+</script>
+</body>
+</html>

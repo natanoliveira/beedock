@@ -19,7 +19,12 @@ export default async function LoginPage({
   if (session) redirect(session.user.isMaster && !session.organization ? "/plataforma" : "/inicio");
 
   return (
-    <AuthTemplate title="Entrar" subtitle="Pedidos, entradas e saídas da sua estamparia em um só lugar.">
+    <AuthTemplate
+      eyebrow="Área do cliente"
+      title="Entrar"
+      footer="Acesso criado pelo administrador da sua empresa."
+      subtitle="Use o e-mail e a senha da sua conta."
+    >
       <LoginForm
         action={loginAction}
         notice={accepted ? "Conta criada. Entre com seu e-mail e senha." : undefined}

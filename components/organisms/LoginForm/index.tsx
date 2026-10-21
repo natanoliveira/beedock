@@ -30,7 +30,13 @@ export function LoginForm({ action, defaultEmail, notice }: LoginFormProps) {
           {state.error}
         </p>
       )}
-      <AppButton type="submit" tone="ink" size="lg" disabled={pending} className="w-full">
+      <AppButton
+        type="submit"
+        tone="ink"
+        size="lg"
+        disabled={pending}
+        className="dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90 w-full"
+      >
         {pending ? "Entrando…" : "Entrar"}
       </AppButton>
     </form>
