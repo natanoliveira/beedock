@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BeeDock Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ===== Tokens (mapeiam 1:1 para globals.css / shadcn) ===== */
+:root {
+  --mel: #F5A400;          /* primary */
+  --mel-600: #D98B00;
+  --mel-100: #FFF1CC;
+  --propolis: #1E160C;     /* ink */
+  --cera: #FBF6EA;         /* background */
+  --favo: #F3EAD3;         /* muted */
+
+  --background: var(--cera);
+  --foreground: var(--propolis);
+  --card: #FFFDF7;
+  --muted: var(--favo);
+  --muted-foreground: #6B5B43;
+  --border: #E6D9BA;
+  --primary: var(--mel);
+  --primary-foreground: var(--propolis);
+  --ring: var(--mel-600);
+
+  --entrou: #2F7D32;  --entrou-bg: #E3F2DF;
+  --saiu: #B3261E;    --saiu-bg: #FBE3DF;
+  --receber: #1F5FA8; --receber-bg: #E1ECFA;
+  --alerta: #8A5A00;  --alerta-bg: #FFF1CC;
+
+  --radius: 14px;
+  --shadow: 0 1px 0 rgba(30,22,12,.06), 0 6px 18px -8px rgba(30,22,12,.25);
+  --hex-stroke: rgba(30,22,12,.06);
+  --font-display: "Archivo", sans-serif;
+  --font-body: "Atkinson Hyperlegible", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --background: #15100A; --foreground: #F7EEDC; --card: #201810; --muted: #2A2016;
+    --muted-foreground: #BCA987; --border: #3A2D1E; --primary-foreground: #1E160C;
+    --entrou: #7BC67E; --entrou-bg: #1D2E1B; --saiu: #F2867C; --saiu-bg: #3A1A16;
+    --receber: #8AB8F0; --receber-bg: #172538; --alerta: #FFC94D; --alerta-bg: #3A2A08;
+    --shadow: 0 1px 0 rgba(0,0,0,.4), 0 8px 20px -8px rgba(0,0,0,.6); --hex-stroke: rgba(245,164,0,.07);
+  }
+}
+:root[data-theme="dark"] {
+  --background: #15100A; --foreground: #F7EEDC; --card: #201810; --muted: #2A2016;
+  --muted-foreground: #BCA987; --border: #3A2D1E; --primary-foreground: #1E160C;
+  --entrou: #7BC67E; --entrou-bg: #1D2E1B; --saiu: #F2867C; --saiu-bg: #3A1A16;
+  --receber: #8AB8F0; --receber-bg: #172538; --alerta: #FFC94D; --alerta-bg: #3A2A08;
+  --shadow: 0 1px 0 rgba(0,0,0,.4), 0 8px 20px -8px rgba(0,0,0,.6); --hex-stroke: rgba(245,164,0,.07);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--background); color: var(--foreground);
+  font: 16px/1.5 var(--font-body);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='97' viewBox='0 0 56 97'%3E%3Cpath d='M28 0 56 16v32L28 64 0 48V16zM28 64v33' fill='none' stroke='%23000' stroke-opacity='.05'/%3E%3C/svg%3E");
+  transition: background-color .2s;
+}
+:root[data-theme="dark"] body { background-image: none; }
+h1,h2,h3 { font-family: var(--font-display); font-stretch: 125%; letter-spacing: -.01em; margin: 0; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px 80px; }
+.tape { height: 8px; background: repeating-linear-gradient(-45deg, var(--mel) 0 12px, var(--propolis) 12px 24px); }
+
+/* ===== Hero ===== */
+.hero { display: grid; gap: 24px; padding: 40px 0 32px; align-items: end; grid-template-columns: 1fr; }
+@media (min-width: 820px) { .hero { grid-template-columns: 1.3fr 1fr; } }
+.eyebrow { font: 700 12px/1 var(--font-display); font-stretch: 100%; letter-spacing: .14em; text-transform: uppercase; color: var(--muted-foreground); }
+.hero h1 { font-size: clamp(40px, 9vw, 84px); line-height: .9; font-weight: 900; margin-top: 12px; }
+.hero h1 em { font-style: normal; color: var(--mel); -webkit-text-stroke: 0; }
+.hero p { color: var(--muted-foreground); max-width: 46ch; margin: 16px 0 0; }
+.theme-toggle { justify-self: start; }
+@media (min-width: 820px) { .theme-toggle { justify-self: end; } }
+
+section { padding: 40px 0 8px; border-top: 1px solid var(--border); margin-top: 24px; }
+.sec-head { display: flex; gap: 12px; align-items: baseline; margin-bottom: 20px; }
+.sec-head .n { width: 16px; height: 18px; background: var(--mel); clip-path: polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%); align-self: center; }
+.sec-head h2 { font-size: 26px; font-weight: 800; }
+.note { color: var(--muted-foreground); font-size: 14px; margin: -8px 0 20px; max-width: 70ch; }
+
+/* ===== Swatches ===== */
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+.sw { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.sw .chip { height: 84px; clip-path: polygon(0 0,100% 0,100% 78%,50% 100%,0 78%); }
+.sw div:last-child { padding: 10px 12px 12px; font-size: 13px; }
+.sw b { display: block; font-family: var(--font-display); font-size: 15px; }
+.sw code { color: var(--muted-foreground); font-size: 12px; }
+
+/* ===== Type ===== */
+.type { display: grid; gap: 14px; }
+.type-row { display: grid; grid-template-columns: 110px 1fr; gap: 12px; align-items: baseline; border-bottom: 1px dashed var(--border); padding-bottom: 12px; }
+.type-row span { font-size: 12px; color: var(--muted-foreground); }
+.money { font-family: var(--font-display); font-variant-numeric: tabular-nums; font-stretch: 100%; font-weight: 800; }
+
+/* ===== Atoms ===== */
+.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.btn {
+  min-height: 48px; padding: 0 20px; border-radius: var(--radius); border: 0; cursor: pointer;
+  font: 700 16px var(--font-display); font-stretch: 100%; display: inline-flex; align-items: center; gap: 8px;
+  transition: transform .12s, box-shadow .12s, background .12s;
+}
+.btn:active { transform: translateY(1px) scale(.98); }
+.btn:focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
+.btn-primary { background: var(--primary); color: var(--primary-foreground); box-shadow: inset 0 -3px 0 var(--mel-600); }
+.btn-primary:hover { background: #FFB61F; }
+.btn-dark { background: var(--foreground); color: var(--background); }
+.btn-outline { background: transparent; color: var(--foreground); box-shadow: inset 0 0 0 2px var(--border); }
+.btn-danger { background: var(--saiu); color: #fff; }
+.btn-ghost { background: transparent; color: var(--foreground); }
+.btn-ghost:hover { background: var(--muted); }
+
+.badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 8px; border-radius: 999px; font: 700 13px var(--font-display); font-stretch: 100%; }
+.badge::before { content: ""; width: 9px; height: 10px; background: currentColor; clip-path: polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%); }
+.b-aberto { background: var(--alerta-bg); color: var(--alerta); }
+.b-pronto { background: var(--receber-bg); color: var(--receber); }
+.b-entregue { background: var(--entrou-bg); color: var(--entrou); }
+.b-cancelado { background: var(--muted); color: var(--muted-foreground); text-decoration: line-through; }
+
+.pill { padding: 6px 12px; border-radius: 10px; background: var(--muted); font-size: 14px; border: 1px solid var(--border); }
+.pill.on { background: var(--foreground); color: var(--background); border-color: var(--foreground); }
+
+.hex { width: 44px; height: 50px; clip-path: polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%); display: grid; place-items: center; font: 800 16px var(--font-display); }
+
+/* ===== Molecules ===== */
+.grid2 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+.field label { display: block; font: 700 14px var(--font-display); font-stretch: 100%; margin-bottom: 6px; }
+.money-input { display: flex; align-items: center; border: 2px solid var(--border); border-radius: var(--radius); background: var(--background); padding: 0 14px; min-height: 56px; }
+.money-input:focus-within { border-color: var(--mel); box-shadow: 0 0 0 4px color-mix(in srgb, var(--mel) 25%, transparent); }
+.money-input span { font: 800 18px var(--font-display); color: var(--muted-foreground); margin-right: 6px; }
+.money-input input { border: 0; outline: 0; background: transparent; color: var(--foreground); font: 800 28px var(--font-display); font-variant-numeric: tabular-nums; width: 100%; }
+.field small { display: block; margin-top: 6px; color: var(--saiu); font-size: 13px; }
+
+.kpi { position: relative; overflow: hidden; }
+.kpi .lbl { font: 700 13px var(--font-display); font-stretch: 100%; letter-spacing: .06em; text-transform: uppercase; color: var(--muted-foreground); }
+.kpi .val { font-size: 28px; margin-top: 4px; }
+.kpi::after { content: ""; position: absolute; right: -14px; top: -10px; width: 64px; height: 72px; opacity: .14; background: currentColor; clip-path: polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%); }
+.kpi.in { color: var(--entrou); } .kpi.out { color: var(--saiu); } .kpi.rec { color: var(--receber); } .kpi.sob { color: var(--alerta); background: var(--mel-100); border-color: var(--mel); }
+:root[data-theme="dark"] .kpi.sob { background: var(--alerta-bg); }
+.kpi .val, .kpi .lbl { position: relative; }
+.kpi .val { color: var(--foreground); }
+
+.tx { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px solid var(--border); min-height: 64px; }
+.tx:last-child { border-bottom: 0; }
+.tx .ic { width: 40px; height: 46px; clip-path: polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%); display: grid; place-items: center; font-size: 18px; flex: none; }
+.tx .ic.in { background: var(--entrou-bg); color: var(--entrou); } .tx .ic.out { background: var(--saiu-bg); color: var(--saiu); }
+.tx .t { flex: 1; min-width: 0; }
+.tx .t b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tx .t span { font-size: 13px; color: var(--muted-foreground); }
+.tx .money.in { color: var(--entrou); } .tx .money.out { color: var(--saiu); }
+
+.empty { text-align: center; padding: 28px 16px; }
+.empty .cells { display: flex; justify-content: center; margin-bottom: 12px; }
+.empty .cells i { width: 34px; height: 39px; margin: 0 -2px; background: var(--muted); border: 0; clip-path: polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%); }
+.empty .cells i:nth-child(2) { background: var(--mel); transform: translateY(-10px); }
+.empty p { color: var(--muted-foreground); margin: 4px 0 16px; }
+
+/* ===== Phones ===== */
+.phones { display: flex; gap: 28px; overflow-x: auto; padding: 8px 4px 24px; scroll-snap-type: x mandatory; }
+.phone { flex: none; width: 360px; max-width: calc(100vw - 40px); height: 740px; border-radius: 40px; background: var(--background); border: 10px solid #0E0A05; position: relative; overflow: hidden; scroll-snap-align: start; box-shadow: 0 30px 60px -30px rgba(0,0,0,.5); }
+.phone .scr { position: absolute; inset: 0; overflow: hidden; display: flex; flex-direction: column; }
+.ph-cap { font-size: 13px; color: var(--muted-foreground); text-align: center; margin-top: 10px; }
+.appbar { display: flex; align-items: center; gap: 10px; padding: 34px 16px 12px; background: var(--propolis); color: #F7EEDC; }
+.appbar .logo { width: 36px; height: 41px; background: var(--mel); color: var(--propolis); clip-path: polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%); display: grid; place-items: center; font: 900 14px var(--font-display); }
+.appbar .co { flex: 1; line-height: 1.2; }
+.appbar .co b { font: 800 16px var(--font-display); display: block; }
+.appbar .co span { font-size: 12px; opacity: .7; }
+.month { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; }
+.month b { font: 800 18px var(--font-display); font-stretch: 112%; }
+.month button { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); color: var(--foreground); font-size: 18px; }
+.content { flex: 1; overflow: hidden; padding: 0 16px 100px; }
+.kgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.kgrid .card { padding: 12px; }
+.kgrid .val { font-size: 21px; }
+.shortcuts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0; }
+.shortcuts .btn { justify-content: center; padding: 0 8px; font-size: 15px; min-height: 52px; }
+.h3 { font: 800 15px var(--font-display); font-stretch: 112%; margin: 16px 0 6px; display: flex; justify-content: space-between; }
+.h3 a { font: 700 13px var(--font-body); color: var(--mel-600); text-decoration: none; }
+
+.order { display: flex; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.order .d { width: 46px; text-align: center; background: var(--muted); border-radius: 10px; padding: 4px 0; font: 800 18px/1.1 var(--font-display); }
+.order .d small { display: block; font-size: 10px; font-weight: 700; color: var(--muted-foreground); text-transform: uppercase; }
+.order .t { flex: 1; min-width: 0; font-size: 14px; }
+.order .t b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.bnav { position: absolute; left: 0; right: 0; bottom: 0; height: 76px; background: var(--card); border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(5,1fr); align-items: center; padding-bottom: 8px; }
+.bnav a { display: grid; justify-items: center; gap: 2px; font-size: 11px; font-weight: 700; color: var(--muted-foreground); text-decoration: none; min-height: 44px; }
+.bnav a svg { width: 22px; height: 22px; }
+.bnav a.on { color: var(--foreground); }
+.bnav a.on svg { color: var(--mel-600); }
+.fab { position: absolute; right: 16px; bottom: 90px; width: 60px; height: 68px; background: var(--mel); color: var(--propolis); clip-path: polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%); display: grid; place-items: center; font: 900 30px var(--font-display); border: 0; }
+
+.support { background: repeating-linear-gradient(-45deg, var(--mel) 0 10px, #FFB61F 10px 20px); color: var(--propolis); font: 700 12px var(--font-display); font-stretch: 100%; padding: 8px 16px; display: flex; gap: 8px; align-items: center; }
+
+/* Drawer */
+.scrim { position: absolute; inset: 0; background: rgba(14,10,5,.55); }
+.drawer { position: absolute; left: 0; right: 0; bottom: 0; background: var(--card); border-radius: 24px 24px 0 0; padding: 10px 16px 20px; animation: up .5s cubic-bezier(.2,.9,.3,1) both; }
+.drawer .handle { width: 56px; height: 6px; border-radius: 6px; margin: 0 auto 14px; background: repeating-linear-gradient(-45deg, var(--mel) 0 6px, var(--propolis) 6px 12px); }
+.drawer h3 { font-size: 20px; margin-bottom: 14px; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; background: var(--muted); border-radius: var(--radius); padding: 4px; margin-bottom: 14px; }
+.seg button { min-height: 44px; border: 0; border-radius: 11px; background: transparent; font: 700 15px var(--font-display); color: var(--muted-foreground); }
+.seg button.on { background: var(--saiu); color: #fff; }
+.pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 14px; }
+@keyframes up { from { transform: translateY(100%); } }
+@media (prefers-reduced-motion: reduce) { .drawer { animation: none; } .btn { transition: none; } }
+
+/* Platform select */
+.select { display: flex; align-items: center; gap: 8px; background: rgba(247,238,220,.1); border: 1px solid rgba(247,238,220,.2); border-radius: 12px; padding: 0 10px; min-height: 44px; color: #F7EEDC; font: 700 14px var(--font-display); }
+.orgs .card { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; padding: 12px; }
+.orgs .t { flex: 1; font-size: 13px; color: var(--muted-foreground); }
+.orgs .t b { display: block; color: var(--foreground); font: 800 15px var(--font-display); }
+</style>
+</head>
+<body>
+<div class="tape" aria-hidden="true"></div>
+<div class="wrap">
+
+  <header class="hero">
+    <div>
+      <div class="eyebrow">Proposta de design system · v0.1</div>
+      <h1>Bee<em>Dock</em><br>Colmeia&nbsp;&amp;&nbsp;Doca</h1>
+      <p>Usa o amarelo-mel e a faixa zebrada da doca de carga como as listras da abelha. O hexágono do favo é a forma-assinatura em ícones, status, FAB e logo. O fundo é cera clara com favo sutil, e o texto é escuro como própolis.</p>
+    </div>
+    <button class="btn btn-outline theme-toggle" id="tt" type="button">◐ Alternar tema</button>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="n" aria-hidden="true"></span><h2>Cores</h2></div>
+    <p class="note">Os tokens mapeiam direto nas variáveis do shadcn (<code>--primary</code>, <code>--background</code>, <code>--muted</code>…). A cor da empresa substitui só <code>--primary</code>. O texto sobre o mel é sempre própolis, nunca branco, por contraste AA.</p>
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:#F5A400"></div><div><b>Mel</b><code>--primary · #F5A400</code></div></div>
+      <div class="sw"><div class="chip" style="background:#1E160C"></div><div><b>Própolis</b><code>--foreground · #1E160C</code></div></div>
+      <div class="sw"><div class="chip" style="background:#FBF6EA;border-bottom:1px solid #E6D9BA"></div><div><b>Cera</b><code>--background · #FBF6EA</code></div></div>
+      <div class="sw"><div class="chip" style="background:#F3EAD3"></div><div><b>Favo</b><code>--muted · #F3EAD3</code></div></div>
+      <div class="sw"><div class="chip" style="background:var(--entrou)"></div><div><b>Entrou</b><code>--entrou</code></div></div>
+      <div class="sw"><div class="chip" style="background:var(--saiu)"></div><div><b>Saiu</b><code>--saiu</code></div></div>
+      <div class="sw"><div class="chip" style="background:var(--receber)"></div><div><b>A receber</b><code>--receber</code></div></div>
+      <div class="sw"><div class="chip" style="background:repeating-linear-gradient(-45deg,#F5A400 0 12px,#1E160C 12px 24px)"></div><div><b>Faixa doca</b><code>destaque / avisos</code></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="n" aria-hidden="true"></span><h2>Tipografia</h2></div>
+    <p class="note"><b>Archivo</b> expandida (largura 125) nos títulos, com cara de etiqueta de caixa e placa de doca. <b>Atkinson Hyperlegible</b> no texto, desenhada para legibilidade (baixa visão, tela pequena, sol forte). Valores sempre com números tabulares.</p>
+    <div class="type">
+      <div class="type-row"><span>Display 32/900</span><h1 style="font-size:32px;font-weight:900">Sobrou este mês</h1></div>
+      <div class="type-row"><span>Título 20/800</span><h2 style="font-size:20px;font-weight:800">Próximas entregas</h2></div>
+      <div class="type-row"><span>Valor 28/800</span><div class="money" style="font-size:28px">R$ 12.480,50</div></div>
+      <div class="type-row"><span>Texto 16/400</span><div>20 camisas time Unidos, sublimação frente e costas.</div></div>
+      <div class="type-row"><span>Legenda 13/400</span><div style="font-size:13px;color:var(--muted-foreground)">Pix · 14 out · por Maria</div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="n" aria-hidden="true"></span><h2>Átomos</h2></div>
+    <div class="row" style="margin-bottom:18px">
+      <button class="btn btn-primary">+ Entrada</button>
+      <button class="btn btn-dark">Salvar</button>
+      <button class="btn btn-outline">Cancelar</button>
+      <button class="btn btn-ghost">Ver todos</button>
+      <button class="btn btn-danger">Excluir</button>
+    </div>
+    <div class="row" style="margin-bottom:18px">
+      <span class="badge b-aberto">Aberto</span>
+      <span class="badge b-pronto">Pronto</span>
+      <span class="badge b-entregue">Entregue</span>
+      <span class="badge b-cancelado">Cancelado</span>
+    </div>
+    <div class="row">
+      <span class="pill on">Peças lisas</span><span class="pill">Insumos</span><span class="pill">Energia</span><span class="pill">Transporte</span>
+      <span class="hex" style="background:var(--mel);color:var(--propolis)">PS</span>
+      <span class="hex" style="background:var(--foreground);color:var(--background)">MA</span>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="n" aria-hidden="true"></span><h2>Moléculas</h2></div>
+    <div class="grid2">
+      <div class="card">
+        <div class="field">
+          <label for="v">Valor da saída</label>
+          <div class="money-input"><span>R$</span><input id="v" inputmode="numeric" value="95,00" aria-describedby="ve"></div>
+          <small id="ve">Informe um valor maior que zero.</small>
+        </div>
+      </div>
+      <div class="kgrid">
+        <div class="card kpi in"><div class="lbl">Entrou</div><div class="val money">R$ 8.240</div></div>
+        <div class="card kpi out"><div class="lbl">Saiu</div><div class="val money">R$ 3.115</div></div>
+        <div class="card kpi sob"><div class="lbl">Sobrou</div><div class="val money">R$ 5.125</div></div>
+        <div class="card kpi rec"><div class="lbl">A receber</div><div class="val money">R$ 1.900</div></div>
+      </div>
+      <div class="card" style="padding:4px 12px">
+        <div class="tx"><div class="ic out">↓</div><div class="t"><b>Tinta branca plastisol</b><span>Insumos · Pix · hoje</span></div><div class="money out">−R$ 95,00</div></div>
+        <div class="tx"><div class="ic in">↑</div><div class="t"><b>Sinal · 20 camisas Unidos</b><span>Pedidos · Pix · ontem</span></div><div class="money in">+R$ 400,00</div></div>
+      </div>
+      <div class="card empty">
+        <div class="cells" aria-hidden="true"><i></i><i></i><i></i></div>
+        <b>Nenhum pedido por aqui</b>
+        <p>Quando chegar uma encomenda, ela aparece nesta doca.</p>
+        <button class="btn btn-primary">+ Pedido</button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="n" aria-hidden="true"></span><h2>Telas · 360px</h2></div>
+    <div class="phones">
+
+      <div>
+        <div class="phone"><div class="scr">
+          <div class="appbar">
+            <div class="logo">PS</div>
+            <div class="co"><b>Prime Studio</b><span>Olá, Maria · Admin</span></div>
+          </div>
+          <div class="month"><button aria-label="Mês anterior">‹</button><b>Outubro 2026</b><button aria-label="Próximo mês">›</button></div>
+          <div class="content">
+            <div class="kgrid">
+              <div class="card kpi in"><div class="lbl">Entrou</div><div class="val money">R$ 8.240</div></div>
+              <div class="card kpi out"><div class="lbl">Saiu</div><div class="val money">R$ 3.115</div></div>
+              <div class="card kpi sob"><div class="lbl">Sobrou</div><div class="val money">R$ 5.125</div></div>
+              <div class="card kpi rec"><div class="lbl">A receber</div><div class="val money">R$ 1.900</div></div>
+            </div>
+            <div class="shortcuts">
+              <button class="btn btn-outline" style="color:var(--entrou)">+ Entrada</button>
+              <button class="btn btn-outline" style="color:var(--saiu)">+ Saída</button>
+              <button class="btn btn-primary">+ Pedido</button>
+            </div>
+            <div class="h3">Próximas entregas <a href="#">Ver todos</a></div>
+            <div class="order"><div class="d">23<small>out</small></div><div class="t"><b>20 camisas time Unidos</b>João Silva</div><span class="badge b-pronto">Pronto</span></div>
+            <div class="order"><div class="d">25<small>out</small></div><div class="t"><b>50 canecas formatura</b>Escola Aurora</div><span class="badge b-aberto">Aberto</span></div>
+            <div class="order"><div class="d">28<small>out</small></div><div class="t"><b>12 bonés bordados</b>Oficina do Zé</div><span class="badge b-aberto">Aberto</span></div>
+          </div>
+          <nav class="bnav" aria-label="Principal">
+            <a class="on" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 21 7v10l-9 5-9-5V7z"/></svg>Início</a>
+            <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16v13H4zM8 7V4h8v3"/></svg>Pedidos</a>
+            <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4v16M7 20l-3-3M7 20l3-3M17 20V4M17 4l-3 3M17 4l3 3"/></svg>Lançamentos</a>
+            <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Relatórios</a>
+            <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>Mais</a>
+          </nav>
+          <button class="fab" aria-label="Novo lançamento">+</button>
+        </div></div>
+        <div class="ph-cap">Início · Admin da empresa</div>
+      </div>
+
+      <div>
+        <div class="phone"><div class="scr">
+          <div class="appbar">
+            <div class="logo">PS</div>
+            <div class="co"><b>Prime Studio</b><span>Lançamentos</span></div>
+          </div>
+          <div class="content" style="padding-top:12px">
+            <div class="tx"><div class="ic out">↓</div><div class="t"><b>Tinta branca plastisol</b><span>Insumos · hoje</span></div><div class="money out">−R$ 95</div></div>
+            <div class="tx"><div class="ic in">↑</div><div class="t"><b>Sinal · camisas Unidos</b><span>Pedidos · ontem</span></div><div class="money in">+R$ 400</div></div>
+          </div>
+          <div class="scrim"></div>
+          <div class="drawer" role="dialog" aria-label="Nova saída">
+            <div class="handle" aria-hidden="true"></div>
+            <h3>Nova saída</h3>
+            <div class="seg"><button>Entrada</button><button class="on">Saída</button></div>
+            <div class="field"><label for="v2">Valor</label><div class="money-input"><span>R$</span><input id="v2" inputmode="numeric" value="95,00"></div></div>
+            <div class="field" style="margin-top:12px"><label>Categoria</label></div>
+            <div class="pills"><span class="pill">Peças lisas</span><span class="pill on">Insumos</span><span class="pill">Energia</span><span class="pill">Transporte</span><span class="pill">Outros</span></div>
+            <div class="field"><label>Pagamento</label></div>
+            <div class="pills"><span class="pill on">Pix</span><span class="pill">Dinheiro</span><span class="pill">Cartão</span></div>
+            <button class="btn btn-dark" style="width:100%;justify-content:center;min-height:56px">Salvar saída</button>
+          </div>
+        </div></div>
+        <div class="ph-cap">Drawer · saída em menos de 15 s</div>
+      </div>
+
+      <div>
+        <div class="phone"><div class="scr">
+          <div class="appbar">
+            <div class="logo">BD</div>
+            <div class="co"><b>Plataforma</b><span>Master</span></div>
+            <div class="select">Todas ▾</div>
+          </div>
+          <div class="support">⚠ Acesso de suporte à Prime Studio · expira em 52 min</div>
+          <div class="content" style="padding-top:14px">
+            <div class="h3" style="margin-top:0">Empresas <a href="#">+ Nova</a></div>
+            <div class="orgs">
+              <div class="card"><span class="hex" style="background:var(--mel);color:var(--propolis)">PS</span><div class="t"><b>Prime Studio</b>4 usuários · acesso há 2 min</div><span class="badge b-entregue">Ativa</span></div>
+              <div class="card"><span class="hex" style="background:var(--foreground);color:var(--background)">EA</span><div class="t"><b>Estampa Arte</b>2 usuários · acesso ontem</div><span class="badge b-entregue">Ativa</span></div>
+              <div class="card"><span class="hex" style="background:var(--muted);color:var(--muted-foreground)">CB</span><div class="t"><b>Caneca Bacana</b>1 usuário · há 12 dias</div><span class="badge b-cancelado">Suspensa</span></div>
+            </div>
+            <div class="h3">Auditoria recente <a href="#">Ver tudo</a></div>
+            <div style="font-size:13px;line-height:1.5;color:var(--muted-foreground)">
+              <p style="margin:0 0 8px"><b style="color:var(--foreground)">Maria</b> editou a saída "Tinta branca": R$ 80,00 → R$ 95,00 · 14:32</p>
+              <p style="margin:0"><b style="color:var(--foreground)">Master</b> abriu acesso de suporte à Prime Studio · 13:40</p>
+            </div>
+          </div>
+        </div></div>
+        <div class="ph-cap">Master · empresas + dropdown + suporte</div>
+      </div>
+
+    </div>
+  </section>
+</div>
+<script>
+  const r = document.documentElement;
+  document.getElementById('tt').onclick = () => {
+    const dark = r.dataset.theme ? r.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    r.dataset.theme = dark ? 'light' : 'dark';
+  };
+</script>
+</body>
+</html>

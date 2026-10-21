@@ -1,0 +1,153 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* Tema escuro segue o sistema operacional */
+@custom-variant dark (@media (prefers-color-scheme: dark));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-body);
+  --font-heading: var(--font-display);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-ink-foreground: var(--ink-foreground);
+  --color-income: var(--income);
+  --color-income-soft: var(--income-soft);
+  --color-expense: var(--expense);
+  --color-expense-soft: var(--expense-soft);
+  --color-receivable: var(--receivable);
+  --color-receivable-soft: var(--receivable-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+}
+
+/* Colmeia & Doca — previews/design-system.html */
+:root {
+  --mel: #f5a400;
+  --propolis: #1e160c;
+
+  --background: #fbf6ea;
+  --foreground: var(--propolis);
+  --card: #fffdf7;
+  --card-foreground: var(--propolis);
+  --popover: #fffdf7;
+  --popover-foreground: var(--propolis);
+  --primary: var(--mel);
+  --primary-foreground: var(--propolis);
+  --primary-strong: #d98b00;
+  --secondary: #f3ead3;
+  --secondary-foreground: var(--propolis);
+  --muted: #f3ead3;
+  --muted-foreground: #6b5b43;
+  --accent: #f3ead3;
+  --accent-foreground: var(--propolis);
+  --destructive: #b3261e;
+  --border: #e6d9ba;
+  --input: #e6d9ba;
+  --ring: #d98b00;
+  --ink: var(--propolis);
+  --ink-foreground: #f7eedc;
+
+  --income: #2f7d32;
+  --income-soft: #e3f2df;
+  --expense: #b3261e;
+  --expense-soft: #fbe3df;
+  --receivable: #1f5fa8;
+  --receivable-soft: #e1ecfa;
+  --warning: #8a5a00;
+  --warning-soft: #fff1cc;
+
+  --radius: 0.875rem;
+  --hex: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  --tape: repeating-linear-gradient(-45deg, var(--mel) 0 12px, var(--propolis) 12px 24px);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #15100a;
+    --foreground: #f7eedc;
+    --card: #201810;
+    --card-foreground: #f7eedc;
+    --popover: #201810;
+    --popover-foreground: #f7eedc;
+    --secondary: #2a2016;
+    --secondary-foreground: #f7eedc;
+    --muted: #2a2016;
+    --muted-foreground: #bca987;
+    --accent: #2a2016;
+    --accent-foreground: #f7eedc;
+    --destructive: #f2867c;
+    --border: #3a2d1e;
+    --input: #3a2d1e;
+    --ink: #0e0a05;
+
+    --income: #7bc67e;
+    --income-soft: #1d2e1b;
+    --expense: #f2867c;
+    --expense-soft: #3a1a16;
+    --receivable: #8ab8f0;
+    --receivable-soft: #172538;
+    --warning: #ffc94d;
+    --warning-soft: #3a2a08;
+  }
+}
+
+@utility hex {
+  clip-path: var(--hex);
+}
+
+@utility tape {
+  background: var(--tape);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    -webkit-tap-highlight-color: transparent;
+  }
+  html {
+    @apply font-sans;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-stretch: 125%;
+    letter-spacing: -0.01em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

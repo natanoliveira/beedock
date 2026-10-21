@@ -1,0 +1,407 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Tabelas de negócio: organizationId preenchido pelo banco a partir de app.current_org
+// (set_config na transação) e protegido por RLS. Ver prisma/migrations/*_rls_audit.
+
+enum PlatformRole {
+  USER
+  MASTER
+}
+
+enum MemberRole {
+  ADMIN
+  FUNCIONARIO
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum Plan {
+  FREE
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum OrderStatus {
+  OPEN
+  READY
+  DELIVERED
+  CANCELED
+}
+
+enum AuditResult {
+  SUCCESS
+  DENIED
+  FAILED
+}
+
+enum LegalDocumentType {
+  TERMS
+  PRIVACY
+}
+
+model Organization {
+  id           String             @id @default(cuid())
+  slug         String             @unique
+  name         String
+  legalName    String?
+  document     String?
+  phone        String?
+  email        String?
+  zipCode      String?
+  street       String?
+  number       String?
+  complement   String?
+  district     String?
+  city         String?
+  state        String?
+  pixKey       String?
+  logoUrl      String?
+  primaryColor String             @default("#F5A400")
+  plan         Plan               @default(FREE)
+  status       OrganizationStatus @default(ACTIVE)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  settings       OrganizationSettings?
+  memberships    Membership[]
+  invitations    Invitation[]
+  sessions       Session[]
+  supportGrants  SupportAccessGrant[]
+  customers      Customer[]
+  orders         Order[]
+  orderPayments  OrderPayment[]
+  transactions   Transaction[]
+  categories     Category[]
+  paymentMethods PaymentMethod[]
+  productTypes   ProductType[]
+}
+
+model OrganizationSettings {
+  id                      String   @id @default(cuid())
+  organizationId          String   @unique @default(dbgenerated("current_setting('app.current_org'::text, true)"))
+  monthStartDay           Int      @default(1)
+  timezone                String   @default("America/Fortaleza")
+  currency                String   @default("BRL")
+  sessionIdleMinutes      Int      @default(60)
+  customerRetentionMonths Int      @default(24)
+  dpoName                 String?
+  dpoEmail                String?
+  dpoPhone                String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  createdById             String?
+  updatedById             String?
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+}
+
+model User {
+  id               String       @id @default(cuid())
+  name             String
+  email            String       @unique
+  phone            String?
+  passwordHash     String?
+  platformRole     PlatformRole @default(USER)
+  failedLoginCount Int          @default(0)
+  lockedUntil      DateTime?
+  lastLoginAt      DateTime?
+  anonymizedAt     DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  memberships   Membership[]
+  sessions      Session[]
+  acceptances   LegalAcceptance[]
+  supportGrants SupportAccessGrant[]
+}
+
+model Membership {
+  id             String     @id @default(cuid())
+  userId         String
+  organizationId String
+  role           MemberRole
+  active         Boolean    @default(true)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  user         User         @relation(fields: [userId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+}
+
+model Invitation {
+  id             String     @id @default(cuid())
+  organizationId String     @default(dbgenerated("current_setting('app.current_org'::text, true)"))
+  email          String
+  name           String
+  phone          String?
+  role           MemberRole
+  tokenHash      String     @unique
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime   @default(now())
+  createdById    String?
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+}
+
+model Session {
+  id             String    @id @default(cuid())
+  userId         String
+  organizationId String?
+  supportGrantId String?
+  ip             String?
+  userAgent      String?
+  idleMinutes    Int
+  createdAt      DateTime  @default(now())
+  lastSeenAt     DateTime  @default(now())
+  expiresAt      DateTime
+  revokedAt      DateTime?
+
+  user         User          @relation(fields: [userId], references: [id])
+  organization Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([userId])
+}
+
+model LegalDocument {
+  id          String            @id @default(cuid())
+  type        LegalDocumentType
+  version     Int
+  content     String
+  publishedAt DateTime          @default(now())
+
+  acceptances LegalAcceptance[]
+
+  @@unique([type, version])
+}
+
+model LegalAcceptance {
+  id         String   @id @default(cuid())
+  userId     String
+  documentId String
+  acceptedAt DateTime @default(now())
+  ip         String?
+  userAgent  String?
+
+  user     User          @relation(fields: [userId], references: [id])
+  document LegalDocument @relation(fields: [documentId], references: [id])
+
+  @@unique([userId, documentId])
+}
+
+model SupportAccessGrant {
+  id             String    @id @default(cuid())
+  organizationId String
+  userId         String
+  reason         String
+  startsAt       DateTime  @default(now())
+  expiresAt      DateTime
+  revokedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@index([organizationId, expiresAt])
+}
+
+model Customer {
+  id             String    @id @default(cuid())
+  organizationId String    @default(dbgenerated("current_setting('app.current_org'::text, true)"))
+  name           String
+  phone          String
+  email          String?
+  document       String?
+  address        String?
+  note           String?
+  anonymizedAt   DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  createdById    String?
+  updatedById    String?
+  deletedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  orders       Order[]
+
+  @@unique([organizationId, id])
+  @@index([organizationId, name])
+}
+
+model ProductType {
+  id             String    @id @default(cuid())
+  organizationId String    @default(dbgenerated("current_setting('app.current_org'::text, true)"))
+  name           String
+  active         Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  createdById    String?
+  updatedById    String?
+  deletedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  orders       Order[]
+
+  @@unique([organizationId, name])
+  @@unique([organizationId, id])
+}
+
+model Category {
+  id             String          @id @default(cuid())
+  organizationId String          @default(dbgenerated("current_setting('app.current_org'::text, true)"))
+  type           TransactionType
+  name           String
+  active         Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  createdById    String?
+  updatedById    String?
+  deletedAt      DateTime?
+
+  organization Organization  @relation(fields: [organizationId], references: [id])
+  transactions Transaction[]
+
+  @@unique([organizationId, type, name])
+  @@unique([organizationId, id])
+}
+
+model PaymentMethod {
+  id             String    @id @default(cuid())
+  organizationId String    @default(dbgenerated("current_setting('app.current_org'::text, true)"))
+  name           String
+  active         Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  createdById    String?
+  updatedById    String?
+  deletedAt      DateTime?
+
+  organization  Organization   @relation(fields: [organizationId], references: [id])
+  transactions  Transaction[]
+  orderPayments OrderPayment[]
+
+  @@unique([organizationId, name])
+  @@unique([organizationId, id])
+}
+
+model Order {
+  id             String      @id @default(cuid())
+  organizationId String      @default(dbgenerated("current_setting('app.current_org'::text, true)"))
+  customerId     String
+  productTypeId  String
+  description    String
+  totalCents     Int
+  dueDate        DateTime    @db.Date
+  status         OrderStatus @default(OPEN)
+  canceledAt     DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  createdById    String?
+  updatedById    String?
+  deletedAt      DateTime?
+
+  organization Organization   @relation(fields: [organizationId], references: [id])
+  customer     Customer       @relation(fields: [organizationId, customerId], references: [organizationId, id])
+  productType  ProductType    @relation(fields: [organizationId, productTypeId], references: [organizationId, id])
+  payments     OrderPayment[]
+
+  @@unique([organizationId, id])
+  @@index([organizationId, status, dueDate])
+  @@index([customerId])
+}
+
+model OrderPayment {
+  id              String    @id @default(cuid())
+  organizationId  String    @default(dbgenerated("current_setting('app.current_org'::text, true)"))
+  orderId         String
+  paymentMethodId String
+  transactionId   String    @unique
+  amountCents     Int
+  paidAt          DateTime  @db.Date
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdById     String?
+  updatedById     String?
+  deletedAt       DateTime?
+
+  organization  Organization  @relation(fields: [organizationId], references: [id])
+  order         Order         @relation(fields: [organizationId, orderId], references: [organizationId, id])
+  paymentMethod PaymentMethod @relation(fields: [organizationId, paymentMethodId], references: [organizationId, id])
+  transaction   Transaction   @relation(fields: [organizationId, transactionId], references: [organizationId, id])
+
+  @@unique([organizationId, transactionId])
+  @@index([orderId])
+}
+
+model Transaction {
+  id              String          @id @default(cuid())
+  organizationId  String          @default(dbgenerated("current_setting('app.current_org'::text, true)"))
+  type            TransactionType
+  amountCents     Int
+  occurredOn      DateTime        @db.Date
+  categoryId      String
+  paymentMethodId String?
+  description     String
+  receiptUrl      String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  createdById     String?
+  updatedById     String?
+  deletedAt       DateTime?
+
+  organization  Organization   @relation(fields: [organizationId], references: [id])
+  category      Category       @relation(fields: [organizationId, categoryId], references: [organizationId, id])
+  paymentMethod PaymentMethod? @relation(fields: [organizationId, paymentMethodId], references: [organizationId, id], onDelete: Restrict)
+  orderPayment  OrderPayment?
+
+  @@unique([organizationId, id])
+  @@index([organizationId, occurredOn])
+  @@index([organizationId, type, categoryId])
+}
+
+model AuditLog {
+  id             String      @id @default(cuid())
+  seq            BigInt      @unique @default(autoincrement())
+  occurredAt     DateTime    @db.Timestamptz(3)
+  organizationId String?
+  userId         String?
+  userName       String?
+  userRole       String?
+  action         String
+  entityType     String?
+  entityId       String?
+  before         Json?
+  after          Json?
+  ip             String?
+  userAgent      String?
+  device         String?
+  result         AuditResult
+  requestId      String?
+  reason         String?
+  prevHash       String?
+  hash           String
+
+  @@index([organizationId, occurredAt])
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([action, ip, occurredAt])
+}
