@@ -1,6 +1,5 @@
-import { LogOut } from "lucide-react";
-import { AppButton } from "@/components/atoms/AppButton";
 import { HexMark } from "@/components/atoms/HexMark";
+import { LogoutButton } from "@/components/molecules/LogoutButton";
 import type { OrgHeaderProps } from "./OrgHeader.types";
 
 const initials = (name: string) =>
@@ -25,11 +24,7 @@ export function OrgHeader({ organizationName, logoUrl, userName, roleLabel, logo
           {userName} · {roleLabel}
         </p>
       </div>
-      <form action={logoutAction}>
-        <AppButton type="submit" tone="ghost" size="icon" aria-label="Sair" className="hover:bg-white/10">
-          <LogOut aria-hidden />
-        </AppButton>
-      </form>
+      <LogoutButton logoutAction={logoutAction} />
     </div>
   );
 }

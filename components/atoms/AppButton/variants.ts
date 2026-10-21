@@ -8,7 +8,8 @@ export const appButtonVariants = cva("font-heading font-bold [font-stretch:100%]
       ink: "bg-foreground text-background hover:bg-foreground/90 hover:text-background",
       outline: "border-2 border-border bg-transparent hover:bg-muted",
       ghost: "bg-transparent hover:bg-muted",
-      danger: "bg-destructive text-white hover:bg-destructive/90 hover:text-white",
+      // no escuro o vermelho clareia: texto escuro mantém contraste AA
+      danger: "bg-destructive text-white hover:bg-destructive/90 hover:text-white dark:text-ink dark:hover:text-ink",
     },
     size: {
       md: "h-12 rounded-lg px-5 text-base",
