@@ -97,11 +97,17 @@ ALTER ROLE beedock_app WITH LOGIN PASSWORD 'uma-senha-forte';
 Coloque em `DATABASE_URL` a URL **pooled** (host com `-pooler`) usando `beedock_app` e essa senha. Depois:
 
 ```bash
-pnpm db:seed          # 3 empresas fictícias, sem usuários
+pnpm db:seed          # 3 empresas fictícias, sem usuários (+ MASTER se SEED_MASTER_* definido)
 pnpm create-admin     # usuário MASTER (pede a senha no terminal)
 pnpm create-org       # empresa + Admin da empresa
-pnpm dev              # http://localhost:3000
+pnpm dev              # http://localhost:3004
 ```
+
+## Painel da plataforma
+
+- `/plataforma` (empresas): o MASTER lista, cria, edita, suspende e reativa empresas.
+- Ao criar a empresa é gerado um convite por link, válido por 48 horas, exibido uma única vez; pode ser reenviado (revoga o anterior).
+- `/convite/[token]`: o Admin da empresa define a senha e acessa o sistema.
 
 ## Variáveis de ambiente
 
@@ -110,9 +116,10 @@ pnpm dev              # http://localhost:3000
 | `DATABASE_URL` | Conexão pooled com o papel `beedock_app` (sujeita a RLS) | Neon › Connect › pooled; usuário `beedock_app` |
 | `DIRECT_URL` | Conexão direta com o papel dono (migrations, seed, scripts) | Neon › Connect › sem pooling |
 | `AUTH_SECRET` | Chave de assinatura do JWT (32+ caracteres) | `openssl rand -base64 32` |
-| `AUTH_URL` | URL pública da aplicação | `http://localhost:3000` ou o domínio na Vercel |
+| `AUTH_URL` | URL pública da aplicação | `http://localhost:3004` ou o domínio na Vercel |
 | `AUDIT_HMAC_KEY` | Chave HMAC da cadeia de auditoria. Fica só na aplicação, nunca no banco | `openssl rand -base64 32` |
-| `BLOB_READ_WRITE_TOKEN` | Upload de logos e comprovantes (Fase 2) | Vercel › Storage › Blob |
+| `BLOB_READ_WRITE_TOKEN` | Opcional. Upload de logos; sem ele o upload fica indisponível | Vercel › Storage › Blob |
+| `SEED_MASTER_NAME` / `SEED_MASTER_EMAIL` / `SEED_MASTER_PASSWORD` | Opcionais, juntos: o `db:seed` cria ou promove o MASTER | Você define |
 | `ENABLE_SIGNUP` | Cadastro público (desligado) | `false` |
 | `TEST_DATABASE_URL` / `TEST_DIRECT_URL` | Banco dos testes de isolamento (opcional) | Branch de teste do Neon |
 
@@ -125,7 +132,7 @@ pnpm dev              # http://localhost:3000
 | `pnpm lint` / `pnpm typecheck` | ESLint (inclui as camadas) / TypeScript |
 | `pnpm test` | Vitest. Os testes de isolamento rodam quando `TEST_*_URL` está definida |
 | `pnpm db:migrate` | `prisma migrate deploy` |
-| `pnpm db:seed` | Empresas fictícias com os cadastros padrão |
+| `pnpm db:seed` | Empresas fictícias com os cadastros padrão. Também cria/promove o MASTER a partir de `SEED_MASTER_NAME/EMAIL/PASSWORD` (pula se ausentes) |
 | `pnpm create-admin` | Cria ou atualiza o usuário MASTER |
 | `pnpm create-org` | Cria uma empresa e o Admin dela |
 | `pnpm audit:verify` | Verifica a cadeia de hash da auditoria |

@@ -12,7 +12,7 @@ jobs:
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
       DIRECT_URL: postgresql://ci:ci@localhost:5432/ci
       AUTH_SECRET: ci-secret-ci-secret-ci-secret-ci-secret
-      AUTH_URL: http://localhost:3000
+      AUTH_URL: http://localhost:3004
       AUDIT_HMAC_KEY: ci-audit-key-ci-audit-key-ci-audit-key
       BLOB_READ_WRITE_TOKEN: ci
       ENABLE_SIGNUP: "false"

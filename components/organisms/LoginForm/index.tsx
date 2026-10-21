@@ -5,18 +5,23 @@ import { AppButton } from "@/components/atoms/AppButton";
 import { FormField } from "@/components/molecules/FormField";
 import type { LoginFormProps } from "./LoginForm.types";
 
-export function LoginForm({ action }: LoginFormProps) {
+export function LoginForm({ action, defaultEmail, notice }: LoginFormProps) {
   const [state, formAction, pending] = useActionState(action, {});
 
   return (
     <form action={formAction} className="grid gap-4" noValidate>
+      {notice && (
+        <p role="status" className="bg-income-soft text-income rounded-lg px-3 py-2.5 text-sm font-bold">
+          {notice}
+        </p>
+      )}
       <FormField
         label="E-mail"
         name="email"
         type="email"
         inputMode="email"
         autoComplete="email"
-        defaultValue={state.email}
+        defaultValue={state.email ?? defaultEmail}
         required
       />
       <FormField label="Senha" name="password" type="password" autoComplete="current-password" required />

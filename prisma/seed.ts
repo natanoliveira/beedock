@@ -1,7 +1,8 @@
 import { seedOrganizationDefaults } from "@/features/organizations/defaults";
-import { ownerClient } from "../scripts/cli";
+import { readMasterSeed, seedMaster } from "@/features/platform/seed-master";
+import { ownerClient, scriptActor } from "../scripts/cli";
 
-// Só dados fictícios e nenhum usuário/senha: acesso via pnpm create-admin / create-org.
+// Empresas fictícias, sem usuários; cria/promove o MASTER se SEED_MASTER_* estiver definido. Admins via pnpm create-org.
 const ORGS = [
   { slug: "prime-studio-demo", name: "Prime Studio - Uniformes (demo)", city: "Teresina", state: "PI" },
   { slug: "estampa-arte-demo", name: "Estampa Arte (demo)", city: "Fortaleza", state: "CE" },
@@ -10,6 +11,9 @@ const ORGS = [
 
 async function main() {
   const db = ownerClient();
+  const master = readMasterSeed(process.env);
+  if (!master) console.log("- MASTER: SEED_MASTER_* ausentes, pulando");
+  else console.log(`- MASTER: ${await db.$transaction((tx) => seedMaster(tx, master, scriptActor("seed")))}`);
   for (const org of ORGS) {
     if (await db.organization.findUnique({ where: { slug: org.slug } })) continue;
     await db.$transaction(async (tx) => {

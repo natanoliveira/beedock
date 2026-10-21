@@ -1,3 +1,4 @@
+import type { Prisma } from "@/generated/prisma/client";
 import type { Tx } from "@/lib/db";
 
 export const DEFAULT_CATEGORIES = {
@@ -7,11 +8,20 @@ export const DEFAULT_CATEGORIES = {
 export const DEFAULT_PAYMENT_METHODS = ["Pix", "Dinheiro", "Cartão"];
 export const DEFAULT_PRODUCT_TYPES = ["Camisa", "Caneca", "Bolsa", "Boné", "Outros"];
 
+export type OrganizationSettingsData = Omit<
+  Prisma.OrganizationSettingsUncheckedCreateInput,
+  "id" | "organizationId" | "createdAt" | "updatedAt" | "createdById" | "updatedById"
+>;
+
 type SeedTx = Pick<Tx, "organizationSettings" | "category" | "paymentMethod" | "productType">;
 
 /** Cadastros padrão da empresa. Rodar dentro de uma transação com app.current_org = organizationId. */
-export async function seedOrganizationDefaults(tx: SeedTx, organizationId: string) {
-  await tx.organizationSettings.create({ data: { organizationId } });
+export async function seedOrganizationDefaults(
+  tx: SeedTx,
+  organizationId: string,
+  settings: Partial<OrganizationSettingsData> = {},
+) {
+  await tx.organizationSettings.create({ data: { ...settings, organizationId } });
   await tx.category.createMany({
     data: [
       ...DEFAULT_CATEGORIES.INCOME.map((name) => ({ organizationId, type: "INCOME" as const, name })),

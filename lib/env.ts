@@ -7,7 +7,7 @@ const schema = z.object({
   AUDIT_HMAC_KEY: z
     .string({ error: "AUDIT_HMAC_KEY ausente (openssl rand -base64 32)" })
     .min(32, "AUDIT_HMAC_KEY precisa ter 32+ caracteres"),
-  BLOB_READ_WRITE_TOKEN: z.string({ error: "BLOB_READ_WRITE_TOKEN ausente" }).min(1),
+  BLOB_READ_WRITE_TOKEN: z.string().min(1).optional(),
   ENABLE_SIGNUP: z
     .enum(["true", "false"])
     .default("false")

@@ -1,28 +1,42 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { Plus } from "lucide-react";
 import { AppButton } from "@/components/atoms/AppButton";
 import { EmptyState } from "@/components/molecules/EmptyState";
-import { AuthTemplate } from "@/components/templates/AuthTemplate";
-import { logoutAction } from "@/features/auth/actions";
+import { OrganizationList } from "@/components/organisms/OrganizationList";
+import { platformActor } from "@/features/platform/actor";
+import { listOrganizations } from "@/features/platform/service";
 import { requireMaster } from "@/lib/session";
 
-export const metadata: Metadata = { title: "Plataforma" };
+export const metadata: Metadata = { title: "Empresas" };
 
-// ponytail: painel completo (empresas, convites, acesso de suporte) é a Fase 2
+const NewButton = () => (
+  <AppButton asChild>
+    <Link href="/plataforma/empresas/nova">
+      <Plus aria-hidden />
+      Nova empresa
+    </Link>
+  </AppButton>
+);
+
 export default async function PlataformaPage() {
-  const session = await requireMaster();
+  await requireMaster();
+  const organizations = await listOrganizations(await platformActor());
   return (
-    <AuthTemplate title="Plataforma" subtitle={`Olá, ${session.user.name}.`}>
-      <EmptyState
-        title="Painel da plataforma"
-        description="Empresas, convites e acesso de suporte chegam na Fase 2."
-        action={
-          <form action={logoutAction}>
-            <AppButton type="submit" tone="outline">
-              Sair
-            </AppButton>
-          </form>
-        }
-      />
-    </AuthTemplate>
+    <div className="grid gap-5">
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-3xl leading-none font-black">Empresas</h1>
+        {organizations.length > 0 && <NewButton />}
+      </div>
+      {organizations.length === 0 ? (
+        <EmptyState
+          title="Nenhuma empresa ainda"
+          description="Cadastre a primeira empresa e envie o convite ao Admin."
+          action={<NewButton />}
+        />
+      ) : (
+        <OrganizationList organizations={organizations} />
+      )}
+    </div>
   );
 }
