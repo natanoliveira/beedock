@@ -6,9 +6,15 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 const START_EVENT = "beedock:navigation-start";
 const SAFETY_MS = 15000;
 
-/** Inicia a barra manualmente (ex.: router.push de filtros). */
-export const startNavigationProgress = () => {
-  if (typeof window !== "undefined") window.dispatchEvent(new Event(START_EVENT));
+// destino igual à URL atual não gera navegação: a barra ficaria presa até o SAFETY_MS
+const isSameUrl = (href: string) => {
+  const url = new URL(href, window.location.href);
+  return url.pathname === window.location.pathname && url.search === window.location.search;
+};
+
+/** Inicia a barra manualmente (ex.: router.push de filtros), com o destino da navegação. */
+export const startNavigationProgress = (href: string) => {
+  if (typeof window !== "undefined" && !isSameUrl(href)) window.dispatchEvent(new Event(START_EVENT));
 };
 
 type Phase = "idle" | "loading" | "done";
@@ -45,9 +51,7 @@ function Bar() {
       if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
       const a = (e.target as Element | null)?.closest?.("a");
       if (!a || (a.target && a.target !== "_self") || a.hasAttribute("download")) return;
-      const url = new URL(a.href, window.location.href);
-      if (url.origin !== window.location.origin) return;
-      if (url.pathname === window.location.pathname && url.search === window.location.search) return;
+      if (new URL(a.href, window.location.href).origin !== window.location.origin || isSameUrl(a.href)) return;
       start();
     };
     document.addEventListener("click", onClick);

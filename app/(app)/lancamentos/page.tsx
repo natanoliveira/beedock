@@ -9,7 +9,7 @@ import {
   todayIn,
 } from "@/features/transactions/period";
 import { listFiltersSchema } from "@/features/transactions/schemas";
-import { formOptions, getFinancialSettings, listTransactions } from "@/features/transactions/service";
+import { formOptions, listTransactions } from "@/features/transactions/service";
 import { receiptUploadEnabled } from "@/features/transactions/storage";
 import { can } from "@/lib/permissions";
 import { requireTenant } from "@/lib/session";
@@ -27,11 +27,11 @@ export default async function Page({
     Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v])),
   );
 
-  const [data, options, settings] = await Promise.all([
+  const [data, options] = await Promise.all([
     listTransactions(ctx, filters),
     formOptions(ctx, { categoryId: filters.categoryId }),
-    getFinancialSettings(ctx),
   ]);
+  const { settings } = data;
 
   const current = currentFinancialMonth(settings.startDay, settings.timezone);
   const label = monthLabel(data.month, settings.startDay);

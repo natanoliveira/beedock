@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { z, ZodError } from "zod";
 import { ForbiddenError } from "@/lib/permissions";
-import { FieldError, NotFoundError } from "./errors";
+import { FieldError, NotFoundError } from "@/features/platform/errors";
 
 vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
 vi.mock("next/navigation", async () => {

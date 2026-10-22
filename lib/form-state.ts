@@ -2,7 +2,7 @@ import { unstable_rethrow } from "next/navigation";
 import { ZodError } from "zod";
 import { ForbiddenError } from "@/lib/permissions";
 import { logger } from "@/lib/logger";
-import { FieldError, NotFoundError } from "./errors";
+import { FieldError, NotFoundError } from "@/features/platform/errors";
 
 export type FormState = {
   ok?: boolean;

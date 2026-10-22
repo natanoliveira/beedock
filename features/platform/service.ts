@@ -170,22 +170,22 @@ export async function updateOrganization(actor: PlatformActor, id: string, org: 
 
 export async function listOrganizations(actor: PlatformActor): Promise<OrganizationRow[]> {
   await assertMaster(actor, "platform.organization_list");
-  const [orgs, counts, seen, invites, admins] = await Promise.all([
+  const [orgs, seen, [counts, invites, admins]] = await Promise.all([
     db.organization.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, slug: true, status: true } }),
-    db.membership.groupBy({ by: ["organizationId"], where: { active: true }, _count: { _all: true } }),
     db.session.groupBy({ by: ["organizationId"], where: { organizationId: { not: null } }, _max: { lastSeenAt: true } }),
-    withScope({ platform: true }, (tx) =>
-      tx.invitation.findMany({
+    withScope({ platform: true }, async (tx) => [
+      await tx.membership.groupBy({ by: ["organizationId"], where: { active: true }, _count: { _all: true } }),
+      await tx.invitation.findMany({
         where: { role: "ADMIN", acceptedAt: null, revokedAt: null, expiresAt: { gt: new Date() } },
         orderBy: { createdAt: "desc" },
         select: { organizationId: true, expiresAt: true, name: true, email: true, phone: true },
       }),
-    ),
-    db.membership.findMany({
-      where: { role: "ADMIN", active: true },
-      orderBy: { createdAt: "asc" },
-      select: { organizationId: true, user: { select: { name: true, email: true } } },
-    }),
+      await tx.membership.findMany({
+        where: { role: "ADMIN", active: true },
+        orderBy: { createdAt: "asc" },
+        select: { organizationId: true, user: { select: { name: true, email: true } } },
+      }),
+    ] as const),
   ]);
   const activeUsers = new Map(counts.map((c) => [c.organizationId, c._count._all]));
   const lastSeen = new Map(seen.map((s) => [s.organizationId, s._max.lastSeenAt]));

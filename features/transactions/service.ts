@@ -114,11 +114,12 @@ export async function listTransactions(
   totals: Totals;
   month: YearMonth;
   range: { from: string; to: string };
-  usedCategoryIds: string[];
+  settings: { startDay: number; timezone: string };
   usedCategories: { id: string; name: string; type: TransactionType; active: boolean }[];
 }> {
   await authorize(ctx, "transaction.view");
-  const { startDay, timezone } = await getFinancialSettings(ctx);
+  const settings = await getFinancialSettings(ctx);
+  const { startDay, timezone } = settings;
   const month = filters.month ?? currentFinancialMonth(startDay, timezone);
   const range = financialMonthRange(month, startDay);
   const where = {
@@ -155,7 +156,7 @@ export async function listTransactions(
       totals,
       month,
       range,
-      usedCategoryIds: used.map((g) => g.categoryId),
+      settings,
       usedCategories,
     };
   });
@@ -163,14 +164,15 @@ export async function listTransactions(
 
 export async function monthSummary(
   ctx: TenantContext,
-): Promise<{ month: YearMonth; incomeCents: number; expenseCents: number; profitCents?: number }> {
+): Promise<Totals & { month: YearMonth; settings: { startDay: number; timezone: string } }> {
   await authorize(ctx, "transaction.view");
-  const { startDay, timezone } = await getFinancialSettings(ctx);
+  const settings = await getFinancialSettings(ctx);
+  const { startDay, timezone } = settings;
   const month = currentFinancialMonth(startDay, timezone);
   const range = financialMonthRange(month, startDay);
   const where = { deletedAt: null, occurredOn: { gte: toDate(range.from), lte: toDate(range.to) } };
   const totals = await withScope({ organizationId: ctx.organizationId }, (tx) => sumByType(tx, where));
-  return { month, ...withProfit(ctx, totals) };
+  return { month, settings, ...withProfit(ctx, totals) };
 }
 
 export async function getTransaction(ctx: TenantContext, id: string): Promise<TransactionRow | null> {
@@ -304,6 +306,8 @@ export async function updateTransaction(
         ...diff(r.before, r.after),
       }),
       async (tx) => {
+        // trava a linha: edições concorrentes leem o comprovante já gravado pela outra, sem apagar blob em uso
+        await tx.$executeRaw`SELECT 1 FROM "Transaction" WHERE id = ${id} FOR UPDATE`;
         const existing = await tx.transaction.findFirst({ where: { id, deletedAt: null } });
         if (!existing) throw new NotFoundError("Lançamento não encontrado.");
         await checkRefs(tx, input, existing);

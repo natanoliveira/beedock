@@ -1,7 +1,9 @@
-// Tabelas com organizationId protegidas por RLS (mesma lista da migration rls_audit + Invitation).
+// Tabelas com organizationId protegidas por RLS (migrations rls_audit e membership_rls).
 export const TENANT_MODELS: ReadonlySet<string> = new Set([
   "OrganizationSettings",
   "Invitation",
+  "Membership",
+  "SupportAccessGrant",
   "Customer",
   "ProductType",
   "Category",

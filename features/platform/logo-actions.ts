@@ -2,11 +2,11 @@
 
 import { put } from "@vercel/blob";
 import { appendAudit } from "@/lib/audit";
+import { blobToken } from "@/lib/blob";
 import { withScope } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { ForbiddenError } from "@/lib/permissions";
 import { platformActor } from "./actor";
-import { blobLogoToken } from "./logo";
 import { assertMaster } from "./service";
 
 const TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -16,7 +16,7 @@ export async function uploadLogoAction(organizationId: string, fd: FormData): Pr
   try {
     const actor = await platformActor();
     await assertMaster(actor, "platform.organization_update");
-    const token = blobLogoToken();
+    const token = blobToken();
     if (!token) return { error: "Upload de logo não configurado neste ambiente." };
     const file = fd.get("logo");
     if (!(file instanceof File) || file.size === 0) return { error: "Selecione uma imagem." };

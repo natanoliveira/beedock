@@ -36,7 +36,10 @@ export async function resendInvitation(
   admin: AdminInviteInput,
 ): Promise<{ inviteUrl: string }> {
   await assertMaster(actor, "platform.invitation_resend");
-  if (await db.membership.findFirst({ where: { organizationId, role: "ADMIN", active: true }, select: { id: true } })) {
+  const hasAdmin = await withScope({ organizationId }, (tx) =>
+    tx.membership.findFirst({ where: { role: "ADMIN", active: true }, select: { id: true } }),
+  );
+  if (hasAdmin) {
     throw new FieldError("email", "Esta empresa já tem um Admin ativo.");
   }
   if (await db.user.findUnique({ where: { email: admin.email }, select: { id: true } })) {

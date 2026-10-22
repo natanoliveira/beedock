@@ -15,7 +15,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireTenant } from "@/lib/session";
-import { toFormState, plainValues, type FormState } from "@/features/platform/form-state";
+import { toFormState, plainValues, type FormState } from "@/lib/form-state";
 import { transactionSchema } from "./schemas";
 import { createTransaction, deleteTransaction, updateTransaction } from "./service";
 

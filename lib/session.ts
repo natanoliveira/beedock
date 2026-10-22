@@ -5,7 +5,7 @@ import { cache } from "react";
 import type { MemberRole } from "@/generated/prisma/enums";
 import type { TenantContext } from "@/lib/audit";
 import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db, withScope } from "@/lib/db";
 import { requestMeta } from "@/lib/request";
 
 const TOUCH_AFTER_MS = 60_000;
@@ -41,9 +41,10 @@ export const getCurrentSession = cache(async (): Promise<CurrentSession | null> 
   let role: MemberRole | null = null;
   if (row.organization) {
     if (row.organization.status !== "ACTIVE") return null;
-    const membership = await db.membership.findUnique({
-      where: { userId_organizationId: { userId: row.userId, organizationId: row.organization.id } },
-    });
+    const organizationId = row.organization.id;
+    const membership = await withScope({ organizationId }, (tx) =>
+      tx.membership.findUnique({ where: { userId_organizationId: { userId: row.userId, organizationId } } }),
+    );
     if (!membership?.active && !isMaster) return null;
     role = membership?.active ? membership.role : null;
   } else if (!isMaster) {

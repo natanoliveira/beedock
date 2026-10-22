@@ -173,10 +173,13 @@ export function withAudit<T>(
   });
 }
 
+/** Escopo da cadeia do ator: a da empresa ou a da plataforma. */
+export const actorScope = (actor: Actor) =>
+  actor.organizationId ? { organizationId: actor.organizationId } : ({ platform: true } as const);
+
 /** Evento isolado (login, negação de acesso, ações da plataforma). */
 export function recordAudit(actor: Actor, event: AuditEvent): Promise<void> {
-  const scope = actor.organizationId ? { organizationId: actor.organizationId } : ({ platform: true } as const);
-  return withScope(scope, (tx) => appendAudit(tx, actor, event));
+  return withScope(actorScope(actor), (tx) => appendAudit(tx, actor, event));
 }
 
 /** Checa a matriz de permissões no service; negação é auditada. */

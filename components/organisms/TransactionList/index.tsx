@@ -62,8 +62,9 @@ export function TransactionList({
     const pagina = patch.pagina ?? (patch.mes || patch.tipo !== undefined || patch.categoria !== undefined ? 1 : page);
     if (pagina > 1) next.set("pagina", String(pagina));
     const qs = next.toString();
-    startNavigationProgress();
-    start(() => router.push(qs ? `${pathname}?${qs}` : pathname));
+    const href = qs ? `${pathname}?${qs}` : pathname;
+    startNavigationProgress(href);
+    start(() => router.push(href));
   };
 
   const categoryOptions = filterCategories.filter(

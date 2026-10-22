@@ -10,7 +10,7 @@ import { toFormValues } from "@/components/organisms/OrganizationForm/values";
 import { consumeInviteFlashAction, resendInvitationAction, setOrganizationStatusAction, updateOrganizationAction } from "@/features/platform/actions";
 import { platformActor } from "@/features/platform/actor";
 import { readInviteFlash } from "@/features/platform/invite-flash";
-import { logoUploadEnabled } from "@/features/platform/logo";
+import { blobUploadEnabled } from "@/lib/blob";
 import { uploadLogoAction } from "@/features/platform/logo-actions";
 import { getOrganization, listOrganizations } from "@/features/platform/service";
 import { requireMaster } from "@/lib/session";
@@ -52,7 +52,7 @@ export default async function EmpresaPage({ params }: { params: Promise<{ id: st
         mode="edit"
         action={updateOrganizationAction.bind(null, id)}
         defaults={toFormValues(org)}
-        logo={<LogoDropzone uploadAction={uploadLogoAction.bind(null, id)} logoUrl={org.logoUrl} enabled={logoUploadEnabled()} />}
+        logo={<LogoDropzone uploadAction={uploadLogoAction.bind(null, id)} logoUrl={org.logoUrl} enabled={blobUploadEnabled()} />}
       />
 
       <section aria-labelledby="status-title" className="bg-card grid gap-3 rounded-xl border p-4 md:p-5">

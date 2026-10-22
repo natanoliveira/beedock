@@ -13,6 +13,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { ZodError, z } from "zod";
+import type { FormState as BaseFormState } from "@/lib/form-state";
 import { ForbiddenError } from "@/lib/permissions";
 import { requestMeta } from "@/lib/request";
 import { platformActor } from "./actor";
@@ -26,13 +27,7 @@ import {
   updateOrganization,
 } from "./service";
 
-export type FormState = {
-  ok?: boolean;
-  error?: string;
-  fieldErrors?: Record<string, string>;
-  inviteUrl?: string;
-  values?: Record<string, unknown>;
-};
+export type FormState = BaseFormState & { inviteUrl?: string };
 
 const flashPath = (id: string) => `/plataforma/empresas/${id}`;
 

@@ -4,7 +4,7 @@ import { KpiCard } from "@/components/molecules/KpiCard";
 import { QuickActions } from "@/components/organisms/QuickActions";
 import { saveTransactionAction } from "@/features/transactions/actions";
 import { monthLabel, todayIn } from "@/features/transactions/period";
-import { formOptions, getFinancialSettings, monthSummary } from "@/features/transactions/service";
+import { formOptions, monthSummary } from "@/features/transactions/service";
 import { receiptUploadEnabled } from "@/features/transactions/storage";
 import { requireTenant } from "@/lib/session";
 
@@ -12,11 +12,8 @@ export const metadata: Metadata = { title: "Início" };
 
 export default async function InicioPage() {
   const ctx = await requireTenant();
-  const [summary, settings, options] = await Promise.all([
-    monthSummary(ctx),
-    getFinancialSettings(ctx),
-    formOptions(ctx),
-  ]);
+  const [summary, options] = await Promise.all([monthSummary(ctx), formOptions(ctx)]);
+  const { settings } = summary;
   const label = monthLabel(summary.month, settings.startDay);
 
   return (

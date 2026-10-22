@@ -1,6 +1,6 @@
 import "server-only";
 import { del, get, put } from "@vercel/blob";
-import { env } from "@/lib/env";
+import { blobToken, blobUploadEnabled } from "@/lib/blob";
 import { logger } from "@/lib/logger";
 import { FieldError } from "@/features/platform/errors";
 
@@ -32,15 +32,7 @@ function matchesMagic(type: string, b: Uint8Array): boolean {
   }
 }
 
-const TOKEN_SHAPE = /^vercel_blob_rw_[A-Za-z0-9]+_/;
-const blobToken = (): string | null => {
-  const t = env.BLOB_READ_WRITE_TOKEN;
-  return t && TOKEN_SHAPE.test(t) ? t : null;
-};
-
-export function receiptUploadEnabled(): boolean {
-  return blobToken() !== null;
-}
+export const receiptUploadEnabled = blobUploadEnabled;
 
 export async function uploadReceipt(organizationId: string, transactionId: string, file: File): Promise<string> {
   const ext = EXT[file.type];

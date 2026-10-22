@@ -3,7 +3,7 @@ import Link from "next/link";
 import { LogoDropzone } from "@/components/molecules/LogoDropzone";
 import { OrganizationForm } from "@/components/organisms/OrganizationForm";
 import { createOrganizationAction } from "@/features/platform/actions";
-import { logoUploadEnabled } from "@/features/platform/logo";
+import { blobUploadEnabled } from "@/lib/blob";
 import { requireMaster } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Nova empresa" };
@@ -18,7 +18,7 @@ export default async function NovaEmpresaPage() {
         </Link>
         <h1 className="text-3xl leading-none font-black">Nova empresa</h1>
       </div>
-      <OrganizationForm mode="create" action={createOrganizationAction} logo={<LogoDropzone enabled={logoUploadEnabled()} />} />
+      <OrganizationForm mode="create" action={createOrganizationAction} logo={<LogoDropzone enabled={blobUploadEnabled()} />} />
     </div>
   );
 }

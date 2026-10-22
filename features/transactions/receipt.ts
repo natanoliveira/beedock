@@ -1,6 +1,6 @@
 import "server-only";
 import { BlobNotFoundError } from "@vercel/blob";
-import { authorize, withAudit, type TenantContext } from "@/lib/audit";
+import { appendAudit, authorize, withAudit, type TenantContext } from "@/lib/audit";
 import { withScope } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { readReceipt } from "./storage";
@@ -73,9 +73,15 @@ export async function loadReceiptFile(
   id: string,
 ): Promise<{ stream: ReadableStream; contentType: string; filename: string } | null> {
   await authorize(ctx, "transaction.view");
-  const t = await withScope({ organizationId: ctx.organizationId }, (tx) =>
-    tx.transaction.findFirst({ where: { id, deletedAt: null, receiptUrl: { not: null } }, select: { receiptUrl: true } }),
-  );
+  const t = await withScope({ organizationId: ctx.organizationId }, async (tx) => {
+    const row = await tx.transaction.findFirst({
+      where: { id, deletedAt: null, receiptUrl: { not: null } },
+      select: { receiptUrl: true },
+    });
+    // como no recibo: audita antes de ler o arquivo, registrar a mais é o lado seguro
+    if (row) await appendAudit(tx, ctx, { action: "transaction.receipt_view", entityType: "Transaction", entityId: id });
+    return row;
+  });
   if (!t?.receiptUrl) return null;
   try {
     const file = await readReceipt(ctx.organizationId, t.receiptUrl);

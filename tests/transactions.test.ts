@@ -267,13 +267,14 @@ describe.skipIf(!APP_URL || !OWNER_URL)("service de lançamentos", () => {
     expect(await doc()).toBeNull();
   }, T);
 
-  it("usedCategoryIds traz as categorias usadas no mês, inclusive desativadas", async () => {
+  it("usedCategories traz as categorias usadas no mês, inclusive desativadas", async () => {
     const { id } = await svc.createTransaction(admin, input({ description: "Usada" }));
     await owner.transaction.update({ where: { id }, data: { categoryId: inactiveIncomeCat } });
     const list = await svc.listTransactions(admin, { page: 1, type: "EXPENSE" });
-    expect(list.usedCategoryIds).toContain(inactiveIncomeCat);
-    expect(list.usedCategoryIds).toContain(incomeCat);
-    expect(list.usedCategoryIds).not.toContain(otherOrgCat);
+    const used = list.usedCategories.map((c) => c.id);
+    expect(used).toContain(inactiveIncomeCat);
+    expect(used).toContain(incomeCat);
+    expect(used).not.toContain(otherOrgCat);
   }, T);
 
   it("categoria desativada: mantém a atual, bloqueia troca para outra desativada", async () => {
@@ -334,6 +335,23 @@ describe.skipIf(!APP_URL || !OWNER_URL)("service de lançamentos", () => {
     expect((await svc.getTransaction(admin, id))?.hasReceipt).toBe(false);
   }, T);
 
+  it("edições concorrentes trocando o comprovante não apagam o arquivo em uso nem deixam órfão", async () => {
+    const del = vi.mocked(storage.deleteReceipt);
+    const { id } = await svc.createTransaction(admin, input({ description: "Corrida" }), pdf());
+    del.mockClear();
+    await Promise.all([
+      svc.updateTransaction(admin, id, input({ description: "Corrida A" }), pdf()),
+      svc.updateTransaction(admin, id, input({ description: "Corrida B" }), pdf()),
+      svc.updateTransaction(admin, id, input({ description: "Corrida C" })),
+    ]);
+    const final = (await owner.transaction.findUnique({ where: { id } }))!.receiptUrl!;
+    const deleted = del.mock.calls.map((c) => (c as unknown as [string, string])[1]);
+    expect(deleted).not.toContain(final);
+    // original + 2 uploads: 1 em uso, os outros 2 apagados uma vez cada
+    expect(new Set(deleted).size).toBe(2);
+    expect(deleted).toHaveLength(2);
+  }, T);
+
   it("empresa B não lê nem edita lançamento da empresa A", async () => {
     const { id } = await svc.createTransaction(admin, input({ description: "Só da A" }));
     expect(await svc.getTransaction(adminB, id)).toBeNull();
@@ -388,6 +406,9 @@ describe.skipIf(!APP_URL || !OWNER_URL)("service de lançamentos", () => {
     expect(read).toHaveBeenCalledWith(orgA, path);
     read.mockRejectedValueOnce(new Error("network"));
     await expect(rc.loadReceiptFile(admin, withFile.id)).rejects.toBeInstanceOf(rc.ReceiptUnavailableError);
+    const views = (entityId: string) => owner.auditLog.count({ where: { action: "transaction.receipt_view", entityId } });
+    expect(await views(withFile.id)).toBe(2);
+    expect(await views(none.id)).toBe(0);
     await svc.deleteTransaction(admin, withFile.id);
     expect(await rc.loadReceiptFile(admin, withFile.id)).toBeNull();
   }, T);

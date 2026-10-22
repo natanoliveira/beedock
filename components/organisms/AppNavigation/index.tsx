@@ -30,6 +30,7 @@ import {
   AppSheetTitle,
   AppSheetTrigger,
 } from "@/components/atoms/AppSheet";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 import type { AppNavigationProps } from "./AppNavigation.types";
 
@@ -45,6 +46,9 @@ const isActive = (pathname: string, item: Item) => {
 export function AppNavigation({ showReports, showAudit, showSettings }: AppNavigationProps) {
   const pathname = usePathname();
   const [sheetOpen, setSheetOpen] = useState(false);
+  // menu do topo aparece a partir do lg: a gaveta aberta fecha ao alargar a tela
+  const wide = useMediaQuery("(min-width: 1024px)");
+  if (wide && sheetOpen) setSheetOpen(false);
 
   const main: Item[] = [
     { href: "/inicio", label: "Início", icon: Hexagon },

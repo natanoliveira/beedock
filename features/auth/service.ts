@@ -1,5 +1,5 @@
 import { hash, verify } from "@node-rs/argon2";
-import { recordAudit, type Actor, type RequestMeta } from "@/lib/audit";
+import { actorScope, appendAudit, recordAudit, type Actor, type RequestMeta } from "@/lib/audit";
 import { db, withScope } from "@/lib/db";
 import { logger } from "@/lib/logger";
 
@@ -44,15 +44,18 @@ export async function verifyCredentials(email: string, password: string, meta: R
     return { ok: false, reason: "rate" };
   }
 
-  const user = await db.user.findUnique({
-    where: { email: email.toLowerCase() },
-    include: {
-      memberships: {
-        where: { active: true, organization: { status: "ACTIVE" } },
-        orderBy: { createdAt: "asc" },
+  // empresa ainda desconhecida: vínculos (RLS) lidos no escopo da plataforma
+  const user = await withScope({ platform: true }, (tx) =>
+    tx.user.findUnique({
+      where: { email: email.toLowerCase() },
+      include: {
+        memberships: {
+          where: { active: true, organization: { status: "ACTIVE" } },
+          orderBy: { createdAt: "asc" },
+        },
       },
-    },
-  });
+    }),
+  );
 
   dummyHash ??= hash("tempo-constante");
 
@@ -102,36 +105,34 @@ export async function verifyCredentials(email: string, password: string, meta: R
     return { ok: false, reason: "inactive" };
   }
 
-  const idleMinutes = actor.organizationId
-    ? ((
-        await withScope({ organizationId: actor.organizationId }, (tx) =>
-          tx.organizationSettings.findFirst({ select: { sessionIdleMinutes: true } }),
-        )
-      )?.sessionIdleMinutes ?? DEFAULT_IDLE_MINUTES)
-    : DEFAULT_IDLE_MINUTES;
-
-  const [session] = await db.$transaction([
-    db.session.create({
+  // sessão, reset das falhas e auditoria na mesma transação: sem login sem rastro
+  const session = await withScope(actorScope(actor), async (tx) => {
+    const settings = actor.organizationId
+      ? await tx.organizationSettings.findFirst({ select: { sessionIdleMinutes: true } })
+      : null;
+    const created = await tx.session.create({
       data: {
         userId: user.id,
         organizationId: actor.organizationId,
         ip: meta.ip,
         userAgent: meta.userAgent,
-        idleMinutes,
+        idleMinutes: settings?.sessionIdleMinutes ?? DEFAULT_IDLE_MINUTES,
         expiresAt: new Date(Date.now() + SESSION_MAX_DAYS * 86_400_000),
       },
-    }),
-    db.user.update({
+    });
+    await tx.user.update({
       where: { id: user.id },
       data: { failedLoginCount: 0, lockedUntil: null, lastLoginAt: new Date() },
-    }),
-  ]);
-
-  await recordAudit(actor, { action: "auth.login", entityType: "Session", entityId: session.id });
+    });
+    await appendAudit(tx, actor, { action: "auth.login", entityType: "Session", entityId: created.id });
+    return created;
+  });
   return { ok: true, sessionId: session.id };
 }
 
 export async function revokeSession(sessionId: string, actor: Actor) {
-  await db.session.updateMany({ where: { id: sessionId, revokedAt: null }, data: { revokedAt: new Date() } });
-  await recordAudit(actor, { action: "auth.logout", entityType: "Session", entityId: sessionId });
+  await withScope(actorScope(actor), async (tx) => {
+    await tx.session.updateMany({ where: { id: sessionId, revokedAt: null }, data: { revokedAt: new Date() } });
+    await appendAudit(tx, actor, { action: "auth.logout", entityType: "Session", entityId: sessionId });
+  });
 }
