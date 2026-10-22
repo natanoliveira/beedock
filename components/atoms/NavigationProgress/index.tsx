@@ -64,7 +64,9 @@ function Bar() {
       aria-hidden
       className="pointer-events-none fixed inset-x-0 top-0 z-[100] h-[3px] origin-left"
       style={{
-        background: "var(--mel, #f5a400)",
+        // a faixa zebrada (Mel + Própolis) fica no topo dos headers: barra clara com halo Mel para aparecer sobre ela
+        background: "#fbf6ea",
+        boxShadow: "0 1px 0 rgba(30, 22, 12, 0.55), 0 0 10px 1px rgba(245, 164, 0, 0.9)",
         opacity: phase === "idle" ? 0 : phase === "done" ? 0 : 1,
         transform: `scaleX(${phase === "idle" ? 0 : phase === "loading" ? 0.8 : 1})`,
         transition:

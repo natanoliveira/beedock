@@ -22,7 +22,8 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" className={`${display.variable} ${body.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col">
+      {/* extensões do navegador (ex.: ColorZilla) injetam atributos no body antes da hidratação */}
+      <body className="flex min-h-full flex-col" suppressHydrationWarning>
         <NavigationProgress />
         {children}
         <AppToaster />
