@@ -31,6 +31,7 @@ Hoje um usuário só entra numa empresa pelo convite de Admin feito na criação
 
 - Empresa ficar **sem nenhum Admin ativo** por ação de usuário (trocar papel/desativar o último Admin deve ser recusado).
 - Admin de empresa conseguir **descobrir** se um e-mail já existe na plataforma (enumeração). Para o Admin, convidar sempre responde "convite gerado".
+  - **Exceção aceita pelo usuário (2026-10-22, opção A):** quem gera o convite recebe o link; ao abri-lo, a página revela se o e-mail já tem conta (pede senha atual vs. cria senha). Risco baixo (só revela que a pessoa usa o BeeDock); bloqueio de conta e limite por IP do login continuam valendo no aceite.
 - Ação do MASTER dentro da empresa aparecer na auditoria como se fosse do Admin.
 - Usuário desativado continuar logado naquela empresa.
 - Qualquer leitura de Membership/Invitation fora de `withScope` (RLS devolve vazio silenciosamente — ver gotcha no mapa).
