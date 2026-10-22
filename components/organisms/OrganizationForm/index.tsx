@@ -22,6 +22,8 @@ type Props = {
   defaults?: Record<string, unknown>;
   /** Campo de logo (LogoDropzone), exibido na seção Marca. */
   logo?: ReactNode;
+  /** Consulta e-mail do Admin no blur; usuário existente é vinculado sem convite. */
+  lookupEmail?: (email: string) => Promise<{ name: string } | null>;
 };
 
 const TIMEZONES = [
@@ -49,7 +51,7 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
   );
 }
 
-export function OrganizationForm({ mode, action, defaults, logo }: Props) {
+export function OrganizationForm({ mode, action, defaults, logo, lookupEmail }: Props) {
   const [state, formAction, pending] = useActionState(action, {});
   const formRef = useRef<HTMLFormElement>(null);
   const submitted = state.values ? toFormValues(state.values) : undefined;
@@ -59,6 +61,7 @@ export function OrganizationForm({ mode, action, defaults, logo }: Props) {
   const [name, setName] = useState(val("name"));
   const [slug, setSlug] = useState(val("slug"));
   const [slugTouched, setSlugTouched] = useState(mode === "edit");
+  const [existing, setExisting] = useState<string | null>(null);
   const [color, setColor] = useState(val("primaryColor") || "#f5a400");
 
   useEffect(() => {
@@ -91,6 +94,16 @@ export function OrganizationForm({ mode, action, defaults, logo }: Props) {
       set("state", d.uf);
     } catch {
       /* silencioso */
+    }
+  }
+
+  async function checkAdminEmail(raw: string) {
+    const email = raw.trim();
+    if (!lookupEmail || !/^\S+@\S+\.\S+$/.test(email)) return setExisting(null);
+    try {
+      setExisting((await lookupEmail(email))?.name ?? null);
+    } catch {
+      setExisting(null);
     }
   }
 
@@ -211,10 +224,22 @@ export function OrganizationForm({ mode, action, defaults, logo }: Props) {
       {mode === "create" && (
         <Section
           title="Admin da empresa"
-          hint="Recebe um link de convite válido por 48 horas para criar a própria senha."
+          hint={existing ? undefined : "Recebe um link de convite válido por 48 horas para criar a própria senha."}
         >
           {f("admin.name", "Nome *", { autoComplete: "off", required: true })}
-          {f("admin.email", "E-mail *", { type: "email", inputMode: "email", autoComplete: "off", required: true })}
+          {f("admin.email", "E-mail *", {
+            type: "email",
+            inputMode: "email",
+            autoComplete: "off",
+            required: true,
+            onChange: () => setExisting(null),
+            onBlur: (e) => void checkAdminEmail(e.target.value),
+          })}
+          {existing && (
+            <p role="status" className="text-warning text-sm font-bold md:col-span-2">
+              Usuário já cadastrado ({existing}): será vinculado como Admin, sem convite.
+            </p>
+          )}
           {f("admin.phone", "Telefone (WhatsApp)", {
             type: "tel",
             inputMode: "tel",

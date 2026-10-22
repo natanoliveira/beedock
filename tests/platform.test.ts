@@ -92,7 +92,7 @@ describe.skipIf(!APP_URL || !OWNER_URL)("service de empresas", () => {
     const actions = logs.map((l) => l.action);
     expect(actions).toContain("platform.organization_create");
     expect(actions).toContain("invitation.create");
-    const token = inviteUrl.split("/convite/")[1]!;
+    const token = inviteUrl!.split("/convite/")[1]!;
     for (const l of logs) expect(JSON.stringify(l.after) + JSON.stringify(l.before)).not.toContain(token);
     expect(createHash("sha256").update(token).digest("hex")).toBe(invites[0]!.tokenHash);
   });
@@ -110,9 +110,23 @@ describe.skipIf(!APP_URL || !OWNER_URL)("service de empresas", () => {
     expect(rej.reason.field).toBe("slug");
   });
 
-  it("e-mail de Admin já existente vira FieldError(email) sem org órfã", async () => {
+  it("e-mail de Admin que já é usuário vira vínculo direto, sem convite", async () => {
     const slug = `d-${suffix}`;
-    await expect(create(slug, emails[0])).rejects.toMatchObject({ field: "email" });
+    const r = await create(slug, emails[1]);
+    expect(r.inviteUrl).toBeNull();
+    const m = await owner.membership.findMany({ where: { organizationId: r.organizationId } });
+    expect(m).toHaveLength(1);
+    expect(m[0]).toMatchObject({ userId: user.userId, role: "ADMIN", active: true });
+    expect(await owner.invitation.count({ where: { organizationId: r.organizationId } })).toBe(0);
+    expect(await owner.auditLog.count({ where: { organizationId: r.organizationId, action: "member.create" } })).toBe(1);
+  });
+
+  it("e-mail de usuário anonimizado não é vinculado e não deixa org órfã", async () => {
+    const e = email("anon");
+    const a = await owner.user.create({ data: { name: "Anon", email: e, anonymizedAt: new Date() } });
+    userIds.push(a.id);
+    const slug = `d2-${suffix}`;
+    await expect(create(slug, e)).rejects.toMatchObject({ field: "email", message: "Este usuário não pode ser vinculado." });
     expect(await owner.organization.count({ where: { slug } })).toBe(0);
   });
 
@@ -168,9 +182,10 @@ describe.skipIf(!APP_URL || !OWNER_URL)("service de empresas", () => {
 
   describe("convites", { timeout: 90_000 }, () => {
     let inv: typeof import("@/features/platform/invitations");
+    let members: typeof import("@/features/members/service");
     let ipN = 0;
     const freshMeta = () => ({ ip: `2001:db8::${suffix}:${++ipN}`, userAgent: "vitest", requestId: null });
-    const tokenOf = (url: string) => url.split("/convite/")[1]!;
+    const tokenOf = (url: string | null) => url!.split("/convite/")[1]!;
     const invalids = (ip: string) => owner.auditLog.count({ where: { action: "invitation.invalid", ip } });
     const track = async (e: string) => {
       const u = await owner.user.findUnique({ where: { email: e } });
@@ -178,12 +193,13 @@ describe.skipIf(!APP_URL || !OWNER_URL)("service de empresas", () => {
     };
     beforeAll(async () => {
       inv = await import("@/features/platform/invitations");
+      members = await import("@/features/members/service");
     });
 
-    it("resendInvitation revoga o anterior e cria novo com e-mail corrigido", async () => {
-      const { organizationId } = await create(`r-${suffix}`);
+    it("inviteMember (reenvio) revoga o anterior do mesmo e-mail e cria novo", async () => {
       const fixed = email("fixed-r");
-      const { inviteUrl } = await inv.resendInvitation(master, organizationId, adminInput(fixed));
+      const { organizationId } = await create(`r-${suffix}`, fixed);
+      const { inviteUrl } = await members.inviteMember(master, organizationId, { ...adminInput(fixed), role: "ADMIN" });
       const all = await owner.invitation.findMany({ where: { organizationId }, orderBy: { createdAt: "asc" } });
       expect(all).toHaveLength(2);
       expect(all[0]!.revokedAt).not.toBeNull();
@@ -200,7 +216,12 @@ describe.skipIf(!APP_URL || !OWNER_URL)("service de empresas", () => {
         organizationName: `Empresa s-${suffix}`,
         name: "Admin Teste",
         email: e,
+        existingUser: false,
       });
+      const e2 = email("find-ex");
+      const exInv = await create(`fx-${suffix}`, e2);
+      userIds.push((await owner.user.create({ data: { name: "Ex", email: e2, passwordHash: "x" } })).id);
+      expect((await inv.findInvitation(tokenOf(exInv.inviteUrl), m))?.existingUser).toBe(true);
       expect(await invalids(m.ip)).toBe(0);
 
       const mk = async (slug: string, patch: object) => {
@@ -225,12 +246,12 @@ describe.skipIf(!APP_URL || !OWNER_URL)("service de empresas", () => {
       expect(organizationId).toBeTruthy();
     });
 
-    it("acceptInvitation cria User + Membership ADMIN; segunda chamada falha; reenviar é recusado", async () => {
+    it("acceptInvitation cria User + Membership ADMIN; segunda chamada falha; reenviar depois do aceite devolve novo link", async () => {
       const e = email("acc");
       const { organizationId, inviteUrl } = await create(`t-${suffix}`, e);
       const token = tokenOf(inviteUrl);
       const m = freshMeta();
-      expect(await inv.acceptInvitation({ token, password: "senha-segura-123" }, m)).toEqual({ ok: true, email: e });
+      expect(await inv.acceptInvitation({ token, password: "senha-segura-123" }, m)).toEqual({ ok: true, email: e, existingUser: false });
       await track(e);
       const u = await owner.user.findUnique({ where: { email: e }, include: { memberships: true } });
       expect(u?.platformRole).toBe("USER");
@@ -240,11 +261,9 @@ describe.skipIf(!APP_URL || !OWNER_URL)("service de empresas", () => {
       const actions = (await owner.auditLog.findMany({ where: { organizationId } })).map((l) => l.action);
       expect(actions).toContain("invitation.accept");
       expect(actions).toContain("member.create");
-      expect(await inv.acceptInvitation({ token, password: "senha-segura-123" }, m)).toEqual({ ok: false });
-      await expect(inv.resendInvitation(master, organizationId, adminInput(email("novo")))).rejects.toMatchObject({
-        field: "email",
-        message: "Esta empresa já tem um Admin ativo.",
-      });
+      expect(await inv.acceptInvitation({ token, password: "senha-segura-123" }, m)).toMatchObject({ ok: false });
+      const again = await members.inviteMember(master, organizationId, { ...adminInput(email("novo")), role: "ADMIN" });
+      expect(again.inviteUrl).toContain("/convite/");
     });
 
     it("aceite concorrente: exatamente um ok", async () => {
@@ -260,17 +279,90 @@ describe.skipIf(!APP_URL || !OWNER_URL)("service de empresas", () => {
       expect(await owner.user.count({ where: { email: e } })).toBe(1);
     });
 
-    it("e-mail virou User depois do convite (caixa diferente) -> ok false", async () => {
-      const e = email("late");
-      const { organizationId, inviteUrl } = await create(`v-${suffix}`, e);
-      const u = await owner.user.create({ data: { name: "Late", email: e.toLowerCase() } });
+    // convite de e-mail novo que depois virou usuário (com senha conhecida)
+    const lateUser = async (tag: string, role: "ADMIN" | "FUNCIONARIO" = "ADMIN") => {
+      const e = email(tag);
+      const { organizationId, inviteUrl } = await create(`${tag}-${suffix}`, e);
+      if (role !== "ADMIN") await owner.invitation.updateMany({ where: { organizationId }, data: { role } });
+      const { hashPassword } = await import("@/features/auth/service");
+      const u = await owner.user.create({ data: { name: "Late", email: e, passwordHash: await hashPassword("senha-atual-123") } });
       userIds.push(u.id);
-      await owner.invitation.updateMany({ where: { organizationId }, data: { email: e.toUpperCase() } });
-      expect(await inv.acceptInvitation({ token: tokenOf(inviteUrl), password: "senha-segura-123" }, freshMeta())).toEqual({
+      return { e, u, organizationId, token: tokenOf(inviteUrl) };
+    };
+
+    it("aceite por quem já tem conta: senha errada não consome, conta falha e audita", async () => {
+      const t = await lateUser("late");
+      const before = t.u.passwordHash;
+      const m = freshMeta();
+      expect(await inv.acceptInvitation({ token: t.token, password: "senha-do-convite-1" }, m)).toEqual({
         ok: false,
+        reason: "password",
       });
-      expect(await owner.membership.count({ where: { organizationId } })).toBe(0);
-      expect((await owner.invitation.findFirst({ where: { organizationId } }))?.acceptedAt).toBeNull();
+      expect(await owner.membership.count({ where: { organizationId: t.organizationId } })).toBe(0);
+      expect((await owner.invitation.findFirst({ where: { organizationId: t.organizationId } }))?.acceptedAt).toBeNull();
+      const u = await owner.user.findUniqueOrThrow({ where: { id: t.u.id } });
+      expect(u.failedLoginCount).toBe(1);
+      expect(u.passwordHash).toBe(before);
+      expect(await owner.auditLog.count({ where: { action: "auth.login_failed", entityId: t.u.id } })).toBe(1);
+    });
+
+    it("aceite por quem já tem conta: senha certa vincula com o papel do convite e não troca a senha", async () => {
+      const t = await lateUser("late2", "FUNCIONARIO");
+      await owner.user.update({ where: { id: t.u.id }, data: { failedLoginCount: 3 } });
+      expect(await inv.acceptInvitation({ token: t.token, password: "senha-atual-123" }, freshMeta())).toEqual({
+        ok: true,
+        email: t.e,
+        existingUser: true,
+      });
+      const u = await owner.user.findUniqueOrThrow({ where: { id: t.u.id }, include: { memberships: true } });
+      expect(u.passwordHash).toBe(t.u.passwordHash);
+      expect(u.failedLoginCount).toBe(0);
+      expect(u.memberships[0]).toMatchObject({ organizationId: t.organizationId, role: "FUNCIONARIO", active: true });
+      const actions = (await owner.auditLog.findMany({ where: { organizationId: t.organizationId } })).map((l) => l.action);
+      expect(actions).toEqual(expect.arrayContaining(["invitation.accept", "member.create"]));
+    });
+
+    it("aceite por quem já tem conta: 5 senhas erradas bloqueiam a conta", async () => {
+      const t = await lateUser("late3");
+      const m = freshMeta();
+      const res = [];
+      for (let i = 0; i < 5; i++) res.push(await inv.acceptInvitation({ token: t.token, password: `errada-numero-${i}` }, m));
+      expect(res.slice(0, 4).every((r) => !r.ok && r.reason === "password")).toBe(true);
+      expect(res[4]).toEqual({ ok: false, reason: "locked" });
+      expect((await owner.user.findUniqueOrThrow({ where: { id: t.u.id } })).lockedUntil).not.toBeNull();
+      expect(await inv.acceptInvitation({ token: t.token, password: "senha-atual-123" }, m)).toEqual({ ok: false, reason: "locked" });
+      expect((await owner.invitation.findFirst({ where: { organizationId: t.organizationId } }))?.acceptedAt).toBeNull();
+    });
+
+    it("aceite por conta existente respeita o rate limit de IP do login", async () => {
+      const t = await lateUser("late5");
+      const m = freshMeta();
+      const { recordAudit } = await import("@/lib/audit");
+      const { IP_MAX_FAILURES } = await import("@/features/auth/service");
+      const anon = { userId: null, userName: null, role: null, organizationId: null, meta: m };
+      for (let i = 0; i < IP_MAX_FAILURES; i++) await recordAudit(anon, { action: "auth.login_failed", result: "FAILED" });
+      expect(await inv.acceptInvitation({ token: t.token, password: "senha-atual-123" }, m)).toEqual({ ok: false, reason: "locked" });
+      expect((await owner.invitation.findFirst({ where: { organizationId: t.organizationId } }))?.acceptedAt).toBeNull();
+      expect(await owner.membership.count({ where: { organizationId: t.organizationId } })).toBe(0);
+    });
+
+    it("vínculo inativo reativa com o papel do convite", async () => {
+      const t = await lateUser("late4", "FUNCIONARIO");
+      await owner.membership.create({ data: { userId: t.u.id, organizationId: t.organizationId, role: "ADMIN", active: false } });
+      expect((await inv.acceptInvitation({ token: t.token, password: "senha-atual-123" }, freshMeta())).ok).toBe(true);
+      expect(await owner.membership.findFirstOrThrow({ where: { userId: t.u.id, organizationId: t.organizationId } })).toMatchObject({
+        active: true,
+        role: "FUNCIONARIO",
+      });
+      expect(await owner.auditLog.count({ where: { organizationId: t.organizationId, action: "member.reactivate" } })).toBe(1);
+    });
+
+    it("senha curta para e-mail novo -> invalid", async () => {
+      const { inviteUrl } = await create(`short-${suffix}`);
+      expect(await inv.acceptInvitation({ token: tokenOf(inviteUrl), password: "curta" }, freshMeta())).toEqual({
+        ok: false,
+        reason: "invalid",
+      });
     });
 
     it("rate limit: 20 invitation.invalid do IP bloqueiam busca sem novo evento", async () => {
@@ -290,7 +382,7 @@ describe.skipIf(!APP_URL || !OWNER_URL)("service de empresas", () => {
     const setup = async (tag: string) => {
       const e = email(`susp-${tag}`);
       const { organizationId, inviteUrl } = await create(`${tag}-${suffix}`, e);
-      const token = inviteUrl.split("/convite/")[1]!;
+      const token = inviteUrl!.split("/convite/")[1]!;
       const inv = await import("@/features/platform/invitations");
       const m = { ip: `2001:db8::${suffix}:s${tag}`, userAgent: "vitest", requestId: null };
       await inv.acceptInvitation({ token, password: "senha-segura-123" }, m);

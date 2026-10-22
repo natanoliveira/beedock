@@ -5,8 +5,7 @@
  * - createOrganizationAction: campos da empresa com o nome do schema (name, slug, ..., "settings.monthStartDay", ...)
  *   e campos do Admin com prefixo "admin." (admin.name, admin.email, admin.phone). fieldErrors usa as mesmas chaves.
  * - updateOrganizationAction: igual, sem "admin.*".
- * - resendInvitationAction: name, email, phone (sem prefixo).
- * - acceptInvitationAction: token (hidden), password, confirm.
+ * - acceptInvitationAction: token (hidden), password, confirm. Sem "confirm" = conta existente (só token e password).
  */
 
 import { cookies, headers } from "next/headers";
@@ -19,8 +18,8 @@ import { requestMeta } from "@/lib/request";
 import { platformActor } from "./actor";
 import { INVITE_FLASH } from "./invite-flash";
 import { FieldError } from "./errors";
-import { acceptInvitation, resendInvitation } from "./invitations";
-import { acceptInviteSchema, adminInviteSchema, formDataToObject, organizationSchema } from "./schemas";
+import { acceptInvitation } from "./invitations";
+import { acceptExistingInviteSchema, acceptInviteSchema, adminInviteSchema, formDataToObject, organizationSchema } from "./schemas";
 import {
   createOrganization,
   setOrganizationStatus,
@@ -60,7 +59,7 @@ export async function createOrganizationAction(_prev: FormState, fd: FormData): 
   const { org, admin } = splitAdmin(fd);
   const values = { ...org, ...Object.fromEntries(Object.entries(admin).map(([k, v]) => [`admin.${k}`, v])) };
   let organizationId: string;
-  let inviteUrl: string;
+  let inviteUrl: string | null;
   try {
     const actor = await platformActor();
     const parsedOrg = organizationSchema.safeParse(org);
@@ -77,6 +76,10 @@ export async function createOrganizationAction(_prev: FormState, fd: FormData): 
     ({ organizationId, inviteUrl } = await createOrganization(actor, parsedOrg.data, parsedAdmin.data));
   } catch (e) {
     return toState(e, values, "", { email: "admin.email" });
+  }
+  if (inviteUrl === null) {
+    revalidatePath("/plataforma/empresas");
+    redirect(`${flashPath(organizationId)}?vinculado=1`);
   }
   (await cookies()).set(INVITE_FLASH, inviteUrl, {
     httpOnly: true,
@@ -102,18 +105,6 @@ export async function updateOrganizationAction(id: string, _prev: FormState, fd:
   return { ok: true, values };
 }
 
-export async function resendInvitationAction(organizationId: string, _prev: FormState, fd: FormData): Promise<FormState> {
-  const values = formDataToObject(fd);
-  try {
-    const actor = await platformActor();
-    const { inviteUrl } = await resendInvitation(actor, organizationId, adminInviteSchema.parse(values));
-    revalidatePath(flashPath(organizationId));
-    return { ok: true, inviteUrl };
-  } catch (e) {
-    return toState(e, values);
-  }
-}
-
 const reasonSchema = z.string().trim().max(500, "Máximo de 500 caracteres.").optional().transform((v) => v || undefined);
 
 export async function setOrganizationStatusAction(
@@ -132,15 +123,21 @@ export async function setOrganizationStatusAction(
   return { ok: true };
 }
 
+const LOCKED = "Conta bloqueada por excesso de tentativas. Tente novamente em 15 minutos.";
+
 export async function acceptInvitationAction(_prev: FormState, fd: FormData): Promise<FormState> {
-  const parsed = acceptInviteSchema.safeParse(formDataToObject(fd));
+  const parsed = (fd.has("confirm") ? acceptInviteSchema : acceptExistingInviteSchema).safeParse(formDataToObject(fd));
   if (!parsed.success) return toState(parsed.error);
   const result = await acceptInvitation(
     { token: parsed.data.token, password: parsed.data.password },
     requestMeta(await headers()),
   );
-  if (!result.ok) return { error: "Convite inválido ou expirado. Peça um novo ao suporte." };
-  redirect(`/login?convite=aceito&email=${encodeURIComponent(result.email)}`);
+  if (!result.ok) {
+    if (result.reason === "password") return { fieldErrors: { password: "Senha incorreta." } };
+    if (result.reason === "locked") return { error: LOCKED };
+    return { error: "Convite inválido ou expirado. Peça um novo ao suporte." };
+  }
+  redirect(`/login?convite=${result.existingUser ? "vinculado" : "aceito"}&email=${encodeURIComponent(result.email)}`);
 }
 
 export async function consumeInviteFlashAction(organizationId: string): Promise<void> {

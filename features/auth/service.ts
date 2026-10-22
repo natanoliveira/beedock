@@ -6,9 +6,9 @@ import { logger } from "@/lib/logger";
 export const MAX_FAILED_LOGINS = 5;
 const LOCK_MINUTES = 15;
 const IP_WINDOW_MINUTES = 15;
-const IP_MAX_FAILURES = 20;
+export const IP_MAX_FAILURES = 20;
 const SESSION_MAX_DAYS = 7;
-const DEFAULT_IDLE_MINUTES = 60;
+export const DEFAULT_IDLE_MINUTES = 60;
 
 export type LoginResult =
   { ok: true; sessionId: string } | { ok: false; reason: "invalid" | "locked" | "rate" | "inactive" };
@@ -27,7 +27,7 @@ const anonymous = (meta: RequestMeta): Actor => ({
   meta,
 });
 
-async function ipBlocked(ip: string | null) {
+export async function ipBlocked(ip: string | null) {
   if (!ip) return false;
   // ponytail: rate limit por IP contando falhas na própria auditoria; trocar por Redis/Upstash se o volume crescer
   const since = new Date(Date.now() - IP_WINDOW_MINUTES * 60_000);
@@ -35,6 +35,36 @@ async function ipBlocked(ip: string | null) {
     tx.auditLog.count({ where: { action: "auth.login_failed", ip, occurredAt: { gte: since } } }),
   );
   return failures >= IP_MAX_FAILURES;
+}
+
+/** Bloqueio, verificação em tempo constante, contagem atômica de falhas e eventos auth.*; compartilhada com o aceite de convite. */
+export async function verifyPassword(
+  user: { id: string; passwordHash: string; lockedUntil: Date | null },
+  password: string,
+  actor: Actor,
+): Promise<"ok" | "invalid" | "locked"> {
+  dummyHash ??= hash("tempo-constante");
+  if (user.lockedUntil && user.lockedUntil > new Date()) {
+    await verify(await dummyHash, password); // bloqueado responde no mesmo tempo
+    await recordAudit(actor, { action: "auth.login_blocked", entityType: "User", entityId: user.id, result: "DENIED" });
+    return "locked";
+  }
+
+  if (!(await verify(user.passwordHash, password))) {
+    // incremento atômico: tentativas em paralelo não escapam do bloqueio
+    await db.user.update({ where: { id: user.id }, data: { failedLoginCount: { increment: 1 } } });
+    const { count } = await db.user.updateMany({
+      where: { id: user.id, failedLoginCount: { gte: MAX_FAILED_LOGINS } },
+      data: { failedLoginCount: 0, lockedUntil: new Date(Date.now() + LOCK_MINUTES * 60_000) },
+    });
+    const lock = count > 0;
+    // ip entra no evento para o rate limit; falha sem empresa vai para a cadeia da plataforma
+    await recordAudit(actor, { action: "auth.login_failed", entityType: "User", entityId: user.id, result: "FAILED" });
+    if (lock)
+      await recordAudit(actor, { action: "auth.locked", entityType: "User", entityId: user.id, result: "DENIED" });
+    return lock ? "locked" : "invalid";
+  }
+  return "ok";
 }
 
 export async function verifyCredentials(email: string, password: string, meta: RequestMeta): Promise<LoginResult> {
@@ -65,7 +95,15 @@ export async function verifyCredentials(email: string, password: string, meta: R
     return { ok: false, reason: "invalid" };
   }
 
-  const membership = user.memberships[0];
+  // entra na empresa da sessão mais recente; sem histórico, no vínculo mais antigo
+  const lastSession = user.memberships.length > 1
+    ? await db.session.findFirst({
+        where: { userId: user.id, organizationId: { in: user.memberships.map((m) => m.organizationId) } },
+        orderBy: { lastSeenAt: "desc" },
+        select: { organizationId: true },
+      })
+    : null;
+  const membership = user.memberships.find((m) => m.organizationId === lastSession?.organizationId) ?? user.memberships[0];
   const actor: Actor = {
     userId: user.id,
     userName: user.name,
@@ -74,26 +112,8 @@ export async function verifyCredentials(email: string, password: string, meta: R
     meta,
   };
 
-  if (user.lockedUntil && user.lockedUntil > new Date()) {
-    await verify(await dummyHash, password); // bloqueado responde no mesmo tempo
-    await recordAudit(actor, { action: "auth.login_blocked", entityType: "User", entityId: user.id, result: "DENIED" });
-    return { ok: false, reason: "locked" };
-  }
-
-  if (!(await verify(user.passwordHash, password))) {
-    // incremento atômico: tentativas em paralelo não escapam do bloqueio
-    await db.user.update({ where: { id: user.id }, data: { failedLoginCount: { increment: 1 } } });
-    const { count } = await db.user.updateMany({
-      where: { id: user.id, failedLoginCount: { gte: MAX_FAILED_LOGINS } },
-      data: { failedLoginCount: 0, lockedUntil: new Date(Date.now() + LOCK_MINUTES * 60_000) },
-    });
-    const lock = count > 0;
-    // ip entra no evento para o rate limit; falha sem empresa vai para a cadeia da plataforma
-    await recordAudit(actor, { action: "auth.login_failed", entityType: "User", entityId: user.id, result: "FAILED" });
-    if (lock)
-      await recordAudit(actor, { action: "auth.locked", entityType: "User", entityId: user.id, result: "DENIED" });
-    return { ok: false, reason: lock ? "locked" : "invalid" };
-  }
+  const check = await verifyPassword({ id: user.id, passwordHash: user.passwordHash, lockedUntil: user.lockedUntil }, password, actor);
+  if (check !== "ok") return { ok: false, reason: check };
 
   if (user.platformRole !== "MASTER" && !membership) {
     await recordAudit(actor, {

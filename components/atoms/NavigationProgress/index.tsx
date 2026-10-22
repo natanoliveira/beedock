@@ -4,6 +4,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 const START_EVENT = "beedock:navigation-start";
+const STOP_EVENT = "beedock:navigation-stop";
 const SAFETY_MS = 15000;
 
 // destino igual à URL atual não gera navegação: a barra ficaria presa até o SAFETY_MS
@@ -15,6 +16,11 @@ const isSameUrl = (href: string) => {
 /** Inicia a barra manualmente (ex.: router.push de filtros), com o destino da navegação. */
 export const startNavigationProgress = (href: string) => {
   if (typeof window !== "undefined" && !isSameUrl(href)) window.dispatchEvent(new Event(START_EVENT));
+};
+
+/** Cancela a barra quando a navegação não vai acontecer (ex.: action recusada). */
+export const stopNavigationProgress = () => {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(STOP_EVENT));
 };
 
 type Phase = "idle" | "loading" | "done";
@@ -54,11 +60,18 @@ function Bar() {
       if (new URL(a.href, window.location.href).origin !== window.location.origin || isSameUrl(a.href)) return;
       start();
     };
-    document.addEventListener("click", onClick);
+    // captura: o React usa o document como raiz e o <Link> chama preventDefault antes de um listener em bubble
+    document.addEventListener("click", onClick, true);
+    const stop = () => {
+      clearTimeout(safety.current);
+      setFrom(null);
+    };
     window.addEventListener(START_EVENT, start);
+    window.addEventListener(STOP_EVENT, stop);
     return () => {
-      document.removeEventListener("click", onClick);
+      document.removeEventListener("click", onClick, true);
       window.removeEventListener(START_EVENT, start);
+      window.removeEventListener(STOP_EVENT, stop);
       clearTimeout(safety.current);
     };
   }, [start]);

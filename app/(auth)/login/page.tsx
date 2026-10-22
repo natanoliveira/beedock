@@ -13,7 +13,9 @@ export default async function LoginPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sp = await searchParams;
-  const accepted = sp.convite === "aceito";
+  const created = sp.convite === "aceito";
+  const linked = sp.convite === "vinculado";
+  const accepted = created || linked;
   const email = typeof sp.email === "string" ? sp.email : undefined;
   const session = await getCurrentSession();
   if (session) redirect(session.user.isMaster && !session.organization ? "/plataforma" : "/inicio");
@@ -27,7 +29,7 @@ export default async function LoginPage({
     >
       <LoginForm
         action={loginAction}
-        notice={accepted ? "Conta criada. Entre com seu e-mail e senha." : undefined}
+        notice={linked ? "Acesso liberado. Entre com seu e-mail e senha." : created ? "Conta criada. Entre com seu e-mail e senha." : undefined}
         defaultEmail={accepted ? email : undefined}
       />
     </AuthTemplate>

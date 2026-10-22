@@ -3,27 +3,44 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { OrgStatusBadge } from "@/components/atoms/OrgStatusBadge";
 import { ConfirmAction } from "@/components/molecules/ConfirmAction";
+import { EnterOrgButton } from "@/components/molecules/EnterOrgButton";
 import { LogoDropzone } from "@/components/molecules/LogoDropzone";
-import { InviteCard } from "@/components/organisms/InviteCard";
+import { TeamManager } from "@/components/organisms/TeamManager";
 import { OrganizationForm } from "@/components/organisms/OrganizationForm";
 import { toFormValues } from "@/components/organisms/OrganizationForm/values";
-import { consumeInviteFlashAction, resendInvitationAction, setOrganizationStatusAction, updateOrganizationAction } from "@/features/platform/actions";
+import {
+  changeMemberRoleAction,
+  inviteMemberAction,
+  linkUserAction,
+  revokeInvitationAction,
+  setMemberActiveAction,
+  switchOrganizationAction,
+} from "@/features/members/actions";
+import { consumeInviteFlashAction, setOrganizationStatusAction, updateOrganizationAction } from "@/features/platform/actions";
 import { platformActor } from "@/features/platform/actor";
 import { readInviteFlash } from "@/features/platform/invite-flash";
 import { blobUploadEnabled } from "@/lib/blob";
 import { uploadLogoAction } from "@/features/platform/logo-actions";
-import { getOrganization, listOrganizations } from "@/features/platform/service";
+import { listTeam } from "@/features/members/service";
+import { getOrganization } from "@/features/platform/service";
 import { requireMaster } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Empresa" };
 
-export default async function EmpresaPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function EmpresaPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ vinculado?: string }>;
+}) {
   const { id } = await params;
-  await requireMaster();
+  const { vinculado } = await searchParams;
+  const session = await requireMaster();
   const actor = await platformActor();
   const org = await getOrganization(actor, id);
   if (!org) notFound();
-  const row = (await listOrganizations(actor)).find((o) => o.id === id);
+  const team = await listTeam(actor, id);
   const flashUrl = await readInviteFlash();
   const suspended = org.status === "SUSPENDED";
 
@@ -36,16 +53,40 @@ export default async function EmpresaPage({ params }: { params: Promise<{ id: st
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-3xl leading-none font-black">{org.name}</h1>
           <OrgStatusBadge status={org.status} />
+          <div className="ml-auto">
+            <EnterOrgButton
+              enterAction={switchOrganizationAction.bind(null, id)}
+              disabled={org.status !== "ACTIVE"}
+              disabledHint="Reative a empresa para entrar."
+            />
+          </div>
         </div>
+        {org.status !== "ACTIVE" && <p className="text-muted-foreground text-sm">Reative a empresa para entrar.</p>}
       </div>
 
-      <InviteCard
-        resendAction={resendInvitationAction.bind(null, id)}
-        consumeFlash={consumeInviteFlashAction.bind(null, id)}
+      {vinculado === "1" && (
+        <p role="status" className="bg-warning-soft text-warning rounded-lg px-3 py-2.5 text-sm font-bold">
+          Usuário já cadastrado: vinculado como Admin.
+        </p>
+      )}
+      {suspended && (
+        <p role="status" className="bg-warning-soft text-warning rounded-lg px-3 py-2.5 text-sm font-bold">
+          Empresa suspensa: convites só funcionam depois de reativar.
+        </p>
+      )}
+
+      <TeamManager
+        members={team.members}
+        invites={team.invites}
+        currentUserId={session.user.id}
         flashUrl={flashUrl}
-        status={org.status}
-        admin={row?.admin ?? null}
-        pendingInvite={row?.pendingInvite ?? null}
+        consumeFlash={consumeInviteFlashAction.bind(null, id)}
+        organizationId={id}
+        inviteAction={inviteMemberAction.bind(null, id)}
+        changeRoleAction={changeMemberRoleAction.bind(null, id)}
+        setActiveAction={setMemberActiveAction.bind(null, id)}
+        revokeInviteAction={revokeInvitationAction.bind(null, id)}
+        linkAction={linkUserAction}
       />
 
       <OrganizationForm

@@ -17,7 +17,7 @@ describe.skipIf(!APP_URL || !OWNER_URL)("login", () => {
   let db: typeof import("@/lib/db")["db"];
   let userId = "";
   let memberId = "";
-  let orgId = "";
+  let orgId = ""; // vazio, não undefined: no Prisma `where: { organizationId: undefined }` apaga tudo se o beforeAll falhar
 
   beforeAll(async () => {
     process.env.DATABASE_URL = APP_URL;
@@ -88,6 +88,34 @@ describe.skipIf(!APP_URL || !OWNER_URL)("login", () => {
       await svc.revokeSession(r.sessionId, actor);
       expect((await owner.session.findUniqueOrThrow({ where: { id: r.sessionId } })).revokedAt).not.toBeNull();
       expect(await audited("auth.logout")).toBe(1);
+    },
+    T,
+  );
+
+  it(
+    "login entra na empresa da sessão mais recente; sem vínculo ativo cai na mais antiga",
+    async () => {
+      const org2 = (await owner.organization.create({ data: { name: "Login T2", slug: `login2-${suffix}` } })).id;
+      await owner.organizationSettings.create({ data: { organizationId: org2, sessionIdleMinutes: 20 } });
+      const link = await owner.membership.create({ data: { userId: memberId, organizationId: org2, role: "ADMIN" } });
+      await owner.session.create({
+        data: { userId: memberId, organizationId: org2, idleMinutes: 20, expiresAt: new Date(Date.now() + 86_400_000) },
+      });
+      try {
+        const r = await svc.verifyCredentials(`membro-${suffix}@teste.local`, "senha-certa-123", meta);
+        if (!r.ok) throw new Error(`login falhou: ${r.reason}`);
+        expect((await owner.session.findUniqueOrThrow({ where: { id: r.sessionId } })).organizationId).toBe(org2);
+
+        await owner.membership.update({ where: { id: link.id }, data: { active: false } });
+        const r2 = await svc.verifyCredentials(`membro-${suffix}@teste.local`, "senha-certa-123", meta);
+        if (!r2.ok) throw new Error(`login falhou: ${r2.reason}`);
+        expect((await owner.session.findUniqueOrThrow({ where: { id: r2.sessionId } })).organizationId).toBe(orgId);
+      } finally {
+        await owner.session.deleteMany({ where: { userId: memberId } });
+        await owner.membership.deleteMany({ where: { organizationId: org2 } });
+        await owner.organizationSettings.deleteMany({ where: { organizationId: org2 } });
+        await owner.organization.deleteMany({ where: { id: org2 } });
+      }
     },
     T,
   );

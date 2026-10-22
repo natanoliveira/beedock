@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LogoDropzone } from "@/components/molecules/LogoDropzone";
 import { OrganizationForm } from "@/components/organisms/OrganizationForm";
+import { findUserByEmailAction } from "@/features/members/actions";
 import { createOrganizationAction } from "@/features/platform/actions";
 import { blobUploadEnabled } from "@/lib/blob";
 import { requireMaster } from "@/lib/session";
@@ -18,7 +19,7 @@ export default async function NovaEmpresaPage() {
         </Link>
         <h1 className="text-3xl leading-none font-black">Nova empresa</h1>
       </div>
-      <OrganizationForm mode="create" action={createOrganizationAction} logo={<LogoDropzone enabled={blobUploadEnabled()} />} />
+      <OrganizationForm mode="create" action={createOrganizationAction} lookupEmail={findUserByEmailAction} logo={<LogoDropzone enabled={blobUploadEnabled()} />} />
     </div>
   );
 }

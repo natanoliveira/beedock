@@ -10,6 +10,7 @@ import {
   Package,
   Settings,
   Users,
+  UsersRound,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -37,13 +38,15 @@ import type { AppNavigationProps } from "./AppNavigation.types";
 type Item = { href: string; label: string; icon: LucideIcon; exact?: boolean };
 
 const AUDIT_HREF = "/configuracoes/auditoria";
+const TEAM_HREF = "/configuracoes/equipe";
 
 const isActive = (pathname: string, item: Item) => {
-  if (item.href === "/configuracoes") return pathname.startsWith(item.href) && !pathname.startsWith(AUDIT_HREF);
+  if (item.href === "/configuracoes")
+    return pathname.startsWith(item.href) && !pathname.startsWith(AUDIT_HREF) && !pathname.startsWith(TEAM_HREF);
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
 };
 
-export function AppNavigation({ showReports, showAudit, showSettings }: AppNavigationProps) {
+export function AppNavigation({ showReports, showAudit, showSettings, showTeam }: AppNavigationProps) {
   const pathname = usePathname();
   const [sheetOpen, setSheetOpen] = useState(false);
   // menu do topo aparece a partir do lg: a gaveta aberta fecha ao alargar a tela
@@ -59,6 +62,7 @@ export function AppNavigation({ showReports, showAudit, showSettings }: AppNavig
   ];
   const company: Item[] = [
     ...(showSettings ? [{ href: "/configuracoes", label: "Configurações", icon: Settings }] : []),
+    ...(showTeam ? [{ href: TEAM_HREF, label: "Equipe", icon: UsersRound }] : []),
     ...(showAudit ? [{ href: AUDIT_HREF, label: "Auditoria", icon: History }] : []),
   ];
   const companyActive = company.some((i) => isActive(pathname, i));

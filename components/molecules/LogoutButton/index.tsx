@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2, LogOut } from "lucide-react";
+import { unstable_rethrow } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AppButton } from "@/components/atoms/AppButton";
@@ -25,7 +26,8 @@ export function LogoutButton({ logoutAction }: LogoutButtonProps) {
     await new Promise((resolve) => setTimeout(resolve, WAIT_MS));
     try {
       await logoutAction(); // o redirect para /login é tratado pelo router, não chega aqui como erro
-    } catch {
+    } catch (e) {
+      unstable_rethrow(e);
       setPending(false);
       toast.error("Não foi possível sair. Tente novamente.");
     }

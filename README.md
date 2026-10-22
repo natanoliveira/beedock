@@ -142,7 +142,7 @@ pnpm dev              # http://localhost:3004
 | `pnpm lint` / `pnpm typecheck` | ESLint (inclui as camadas) / TypeScript |
 | `pnpm test` | Vitest. Os testes de isolamento rodam quando `TEST_*_URL` está definida |
 | `pnpm db:migrate` | `prisma migrate deploy` |
-| `pnpm db:seed` | Empresas fictícias com os cadastros padrão. Também cria/promove o MASTER a partir de `SEED_MASTER_NAME/EMAIL/PASSWORD` (pula se ausentes) |
+| `pnpm db:seed` | Empresas fictícias com os cadastros padrão. Também cria/promove o MASTER a partir de `SEED_MASTER_NAME/EMAIL/PASSWORD` (pula se ausentes). Recria configurações que faltarem. `PRUNE_CONFIRM=<host do DIRECT_URL> pnpm db:seed -- --prune` (só fora de produção; sem a confirmação do host não apaga nada) apaga as empresas que não são do seed e os usuários que ficam sem vínculo |
 | `pnpm create-admin` | Cria ou atualiza o usuário MASTER |
 | `pnpm create-org` | Cria uma empresa e o Admin dela |
 | `pnpm audit:verify` | Verifica a cadeia de hash da auditoria |

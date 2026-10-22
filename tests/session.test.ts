@@ -17,7 +17,7 @@ describe.skipIf(!APP_URL || !OWNER_URL)("sessão: MASTER dentro da empresa", () 
   let svc: typeof import("@/features/catalog/service");
   let perms: typeof import("@/lib/permissions");
   let db: (typeof import("@/lib/db"))["db"];
-  let orgId: string;
+  let orgId = ""; // vazio, não undefined: no Prisma `where: { organizationId: undefined }` apaga tudo se o beforeAll falhar
   let masterId: string;
   let userId: string;
   let masterSid: string;

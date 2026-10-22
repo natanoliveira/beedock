@@ -7,6 +7,7 @@ import { withScope, type Tx, db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { ForbiddenError } from "@/lib/permissions";
 import { EMAIL_TAKEN, FieldError, SLUG_TAKEN } from "./errors";
+import type { MemberInviteInput } from "@/features/members/schemas";
 import type { AdminInviteInput, OrganizationInput } from "./schemas";
 
 export type PlatformActor = Actor & { userId: string; userName: string; isMaster: boolean };
@@ -32,7 +33,7 @@ export async function assertMaster(actor: PlatformActor, action: string): Promis
   throw new ForbiddenError();
 }
 
-const isUnique = (e: unknown) => e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
+export const isUnique = (e: unknown) => e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
 
 /** Converte violação de unicidade (corrida entre checagem e insert) em erro de campo. */
 async function mapUnique<T>(field: "slug" | "email", fn: () => Promise<T>): Promise<T> {
@@ -76,20 +77,20 @@ function settingsData(s: OrganizationInput["settings"]) {
   };
 }
 
-/** Revoga convites ADMIN pendentes, cria o novo e devolve o link. O token só existe aqui e no link. */
-export async function issueInvite(tx: Tx, actor: Actor, organizationId: string, admin: AdminInviteInput): Promise<string> {
+/** Revoga convites abertos do mesmo e-mail na empresa, cria o novo e devolve o link. O token só existe aqui e no link. */
+export async function issueInvite(tx: Tx, actor: Actor, organizationId: string, invite: MemberInviteInput): Promise<string> {
   const token = randomBytes(32).toString("base64url");
   const tokenHash = hashToken(token);
   await tx.invitation.updateMany({
-    where: { organizationId, role: "ADMIN", acceptedAt: null, revokedAt: null },
+    where: { organizationId, email: invite.email, acceptedAt: null, revokedAt: null },
     data: { revokedAt: new Date() },
   });
-  const invite = await tx.invitation.create({
+  const created = await tx.invitation.create({
     data: {
-      email: admin.email,
-      name: admin.name,
-      phone: admin.phone ?? null,
-      role: "ADMIN",
+      email: invite.email,
+      name: invite.name,
+      phone: invite.phone ?? null,
+      role: invite.role,
       tokenHash,
       expiresAt: new Date(Date.now() + INVITE_TTL_MS),
       createdById: actor.userId,
@@ -98,8 +99,8 @@ export async function issueInvite(tx: Tx, actor: Actor, organizationId: string, 
   await appendAudit(tx, { ...actor, organizationId }, {
     action: "invitation.create",
     entityType: "Invitation",
-    entityId: invite.id,
-    after: { name: admin.name, email: admin.email, role: "ADMIN" },
+    entityId: created.id,
+    after: { name: invite.name, email: invite.email, role: invite.role },
   });
   return `${env.AUTH_URL}/convite/${token}`;
 }
@@ -108,14 +109,11 @@ export async function createOrganization(
   actor: PlatformActor,
   org: OrganizationInput,
   admin: AdminInviteInput,
-): Promise<{ organizationId: string; inviteUrl: string }> {
+): Promise<{ organizationId: string; inviteUrl: string | null }> {
   await assertMaster(actor, "platform.organization_create");
 
   if (await db.organization.findUnique({ where: { slug: org.slug }, select: { id: true } })) {
     throw new FieldError("slug", SLUG_TAKEN);
-  }
-  if (await db.user.findUnique({ where: { email: admin.email }, select: { id: true } })) {
-    throw new FieldError("email", EMAIL_TAKEN);
   }
 
   const organizationId = randomUUID();
@@ -123,9 +121,6 @@ export async function createOrganization(
   const inviteUrl = await mapUnique("slug", () =>
     withScope({ organizationId }, async (tx) => {
       await tx.organization.create({ data: { id: organizationId, ...orgData(org) } });
-      if (await tx.user.findUnique({ where: { email: admin.email }, select: { id: true } })) {
-        throw new FieldError("email", EMAIL_TAKEN);
-      }
       await seedOrganizationDefaults(tx, organizationId, settingsData(org.settings));
       await appendAudit(tx, orgActor, {
         action: "platform.organization_create",
@@ -133,7 +128,18 @@ export async function createOrganization(
         entityId: organizationId,
         after: { name: org.name, slug: org.slug },
       });
-      return issueInvite(tx, actor, organizationId, admin);
+      // e-mail de quem já tem conta: vínculo direto como Admin, sem convite
+      const existing = await tx.user.findUnique({ where: { email: admin.email } });
+      if (!existing) return issueInvite(tx, actor, organizationId, { ...admin, role: "ADMIN" });
+      if (existing.anonymizedAt) throw new FieldError("email", "Este usuário não pode ser vinculado.");
+      const created = await tx.membership.create({ data: { userId: existing.id, organizationId, role: "ADMIN" } });
+      await appendAudit(tx, orgActor, {
+        action: "member.create",
+        entityType: "Membership",
+        entityId: created.id,
+        after: { name: existing.name, email: existing.email, role: "ADMIN" },
+      });
+      return null;
     }),
   );
   return { organizationId, inviteUrl };

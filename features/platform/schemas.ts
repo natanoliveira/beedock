@@ -110,6 +110,11 @@ export const acceptInviteSchema = z
     message: "As senhas não conferem.",
   });
 
+export const acceptExistingInviteSchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(1, "Informe sua senha."),
+});
+
 export function formDataToObject(fd: FormData): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, value] of fd.entries()) {
