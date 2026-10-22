@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Archivo, Atkinson_Hyperlegible } from "next/font/google";
 import { AppToaster } from "@/components/atoms/AppToaster";
+import { NavigationProgress } from "@/components/atoms/NavigationProgress";
 import "./globals.css";
 
 const display = Archivo({ subsets: ["latin"], axes: ["wdth"], variable: "--font-display" });
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR" className={`${display.variable} ${body.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
+        <NavigationProgress />
         {children}
         <AppToaster />
       </body>

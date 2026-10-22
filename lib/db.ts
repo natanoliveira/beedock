@@ -4,7 +4,9 @@ import { PrismaClient, type Prisma } from "@/generated/prisma/client";
 import { env } from "@/lib/env";
 import { scopeArgs, TENANT_MODELS, type Scope } from "@/lib/tenant";
 
-const scopeStore = new AsyncLocalStorage<Scope>();
+const g = globalThis as unknown as { scopeStore?: AsyncLocalStorage<Scope>; db?: PrismaClient };
+g.scopeStore ??= new AsyncLocalStorage<Scope>();
+const scopeStore = g.scopeStore;
 
 function createClient(): PrismaClient {
   const base = new PrismaClient({ adapter: new PrismaNeon({ connectionString: env.DATABASE_URL }) });
@@ -23,10 +25,8 @@ function createClient(): PrismaClient {
   }) as unknown as PrismaClient; // extension só de query: a API pública do cliente não muda
 }
 
-const globalForDb = globalThis as unknown as { db?: PrismaClient };
-
-export const db = globalForDb.db ?? createClient();
-if (process.env.NODE_ENV !== "production") globalForDb.db = db;
+export const db = g.db ?? createClient();
+if (process.env.NODE_ENV !== "production") g.db = db;
 
 export type Tx = Prisma.TransactionClient;
 

@@ -362,6 +362,8 @@ model Transaction {
   paymentMethodId String?
   description     String
   receiptUrl      String?
+  payerName       String?
+  payerDocument   String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   createdById     String?

@@ -67,9 +67,10 @@ export function InviteCard({ resendAction, consumeFlash, flashUrl, status, admin
   }
 
   const digits = (linkPhone ?? "").replace(/\D/g, "");
-  const whatsapp = link && digits
-    ? `https://wa.me/55${digits}?text=${encodeURIComponent(`Olá! Seu acesso ao BeeDock está pronto. Crie sua senha pelo link (vale por 48 horas): ${link}`)}`
-    : null;
+  const whatsapp =
+    link && digits
+      ? `https://wa.me/55${digits}?text=${encodeURIComponent(`Olá! Seu acesso ao BeeDock está pronto. Crie sua senha pelo link (vale por 48 horas): ${link}`)}`
+      : null;
 
   async function copy() {
     if (!link) return;
@@ -89,7 +90,9 @@ export function InviteCard({ resendAction, consumeFlash, flashUrl, status, admin
     <Shell>
       {link ? (
         <div className="bg-warning-soft grid gap-3 rounded-lg p-3">
-          <p className="text-warning text-sm font-bold">Copie agora: este link aparece só desta vez. Vale por 48 horas.</p>
+          <p className="text-warning text-sm font-bold">
+            Copie agora: este link aparece só desta vez. Vale por 48 horas.
+          </p>
           <input
             readOnly
             aria-label="Link de convite"
@@ -114,7 +117,8 @@ export function InviteCard({ resendAction, consumeFlash, flashUrl, status, admin
         </div>
       ) : pendingInvite ? (
         <p>
-          <span className="font-heading font-bold">Convite pendente</span> para {pendingInvite.name} · {pendingInvite.email}.
+          <span className="font-heading font-bold">Convite pendente</span> para {pendingInvite.name} ·{" "}
+          {pendingInvite.email}.
           <span className="text-muted-foreground"> Expira em {formatDateTime(pendingInvite.expiresAt)}.</span>
         </p>
       ) : (
@@ -129,11 +133,40 @@ export function InviteCard({ resendAction, consumeFlash, flashUrl, status, admin
 
       {editing ? (
         <form action={formAction} noValidate className="grid gap-4 border-t pt-4">
-          <p className="text-muted-foreground text-sm">Gerar um novo convite revoga o anterior. Corrija os dados se precisar.</p>
+          <p className="text-muted-foreground text-sm">
+            Gerar um novo convite revoga o anterior. Corrija os dados se precisar.
+          </p>
           <div className="grid gap-4 md:grid-cols-2">
-            <FormField label="Nome *" name="name" id="invite-name" defaultValue={v("name")} error={state.fieldErrors?.name} autoComplete="off" required />
-            <FormField label="E-mail *" name="email" id="invite-email" type="email" inputMode="email" defaultValue={v("email")} error={state.fieldErrors?.email} autoComplete="off" required />
-            <FormField label="Telefone (WhatsApp)" name="phone" id="invite-phone" type="tel" inputMode="tel" defaultValue={v("phone")} error={state.fieldErrors?.phone} autoComplete="off" />
+            <FormField
+              label="Nome *"
+              name="name"
+              id="invite-name"
+              defaultValue={v("name")}
+              error={state.fieldErrors?.name}
+              autoComplete="off"
+              required
+            />
+            <FormField
+              label="E-mail *"
+              name="email"
+              id="invite-email"
+              type="email"
+              inputMode="email"
+              defaultValue={v("email")}
+              error={state.fieldErrors?.email}
+              autoComplete="off"
+              required
+            />
+            <FormField
+              label="Telefone (WhatsApp)"
+              name="phone"
+              id="invite-phone"
+              type="tel"
+              inputMode="tel"
+              defaultValue={v("phone")}
+              error={state.fieldErrors?.phone}
+              autoComplete="off"
+            />
           </div>
           {state.error && (
             <p role="alert" className="bg-expense-soft text-expense rounded-lg px-3 py-2.5 text-sm font-bold">

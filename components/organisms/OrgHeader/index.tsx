@@ -1,5 +1,4 @@
 import { HexMark } from "@/components/atoms/HexMark";
-import { LogoutButton } from "@/components/molecules/LogoutButton";
 import type { OrgHeaderProps } from "./OrgHeader.types";
 
 const initials = (name: string) =>
@@ -9,22 +8,21 @@ const initials = (name: string) =>
     .map((w) => w[0]?.toUpperCase())
     .join("");
 
-export function OrgHeader({ organizationName, logoUrl, userName, roleLabel, logoutAction }: OrgHeaderProps) {
+/** Marca da empresa no topo: logo (ou iniciais) + nome. */
+export function OrgHeader({ organizationName, logoUrl }: OrgHeaderProps) {
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex min-w-0 shrink items-center gap-2.5">
       {logoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- logo vem do Vercel Blob, tamanho fixo
-        <img src={logoUrl} alt="" className="hex h-[46px] w-10 object-cover" />
+        <img src={logoUrl} alt="" className="hex h-[39px] w-[34px] shrink-0 object-cover" />
       ) : (
-        <HexMark tone="primary">{initials(organizationName)}</HexMark>
+        <HexMark tone="primary" className="h-[39px] w-[34px] text-xs">
+          {initials(organizationName)}
+        </HexMark>
       )}
-      <div className="min-w-0 flex-1 leading-tight">
-        <p className="font-heading truncate text-base font-extrabold">{organizationName}</p>
-        <p className="truncate text-xs opacity-75">
-          {userName} · {roleLabel}
-        </p>
-      </div>
-      <LogoutButton logoutAction={logoutAction} />
+      <p className="font-heading max-w-[11rem] truncate text-sm leading-tight font-extrabold sm:max-w-[16rem]">
+        {organizationName}
+      </p>
     </div>
   );
 }

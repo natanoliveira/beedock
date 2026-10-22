@@ -27,8 +27,8 @@ const nextConfig: NextConfig = {
   // ponytail: tudo aqui é por empresa e por sessão; Cache Components exigiria Suspense em cada leitura de sessão sem ganho real
   cacheComponents: false,
   poweredByHeader: false,
-  // logo de até 1 MB + overhead multipart (padrão do Next: 1 MB)
-  experimental: { serverActions: { bodySizeLimit: "2mb" } },
+  // logo de até 1 MB e comprovante de até 3 MB (+ overhead multipart; padrão do Next: 1 MB)
+  experimental: { serverActions: { bodySizeLimit: "4mb" } },
   turbopack: {
     rules: {
       "*.css": {

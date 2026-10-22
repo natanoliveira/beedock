@@ -3,9 +3,10 @@
 import { put } from "@vercel/blob";
 import { appendAudit } from "@/lib/audit";
 import { withScope } from "@/lib/db";
-import { env } from "@/lib/env";
+import { logger } from "@/lib/logger";
 import { ForbiddenError } from "@/lib/permissions";
 import { platformActor } from "./actor";
+import { blobLogoToken } from "./logo";
 import { assertMaster } from "./service";
 
 const TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -15,17 +16,23 @@ export async function uploadLogoAction(organizationId: string, fd: FormData): Pr
   try {
     const actor = await platformActor();
     await assertMaster(actor, "platform.organization_update");
-    const token = env.BLOB_READ_WRITE_TOKEN;
+    const token = blobLogoToken();
     if (!token) return { error: "Upload de logo não configurado neste ambiente." };
     const file = fd.get("logo");
     if (!(file instanceof File) || file.size === 0) return { error: "Selecione uma imagem." };
     if (!TYPES.includes(file.type)) return { error: "Use uma imagem PNG, JPG ou WebP." };
     if (file.size > MAX_BYTES) return { error: "A imagem deve ter no máximo 1 MB." };
-    const { url } = await put(`org/${organizationId}/logo-${Date.now()}.webp`, file, {
-      access: "public",
-      contentType: file.type,
-      token,
-    });
+    let url: string;
+    try {
+      ({ url } = await put(`org/${organizationId}/logo-${Date.now()}.webp`, file, {
+        access: "public",
+        contentType: file.type,
+        token,
+      }));
+    } catch (e) {
+      logger.error("logo.upload_failed", e, { organizationId });
+      return { error: "Não foi possível enviar o logo agora. Tente de novo." };
+    }
     await withScope({ organizationId }, async (tx) => {
       const current = await tx.organization.findUniqueOrThrow({ where: { id: organizationId }, select: { logoUrl: true } });
       await tx.organization.update({ where: { id: organizationId }, data: { logoUrl: url } });

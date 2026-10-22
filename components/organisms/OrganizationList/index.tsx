@@ -59,11 +59,21 @@ export function OrganizationList({ organizations }: { organizations: Organizatio
           <caption className="sr-only">Empresas da plataforma</caption>
           <thead className="bg-muted text-muted-foreground font-heading text-sm [font-stretch:100%]">
             <tr>
-              <th scope="col" className="px-4 py-3 font-bold">Empresa</th>
-              <th scope="col" className="px-4 py-3 font-bold">Status</th>
-              <th scope="col" className="px-4 py-3 text-right font-bold">Usuários</th>
-              <th scope="col" className="px-4 py-3 font-bold">Último acesso</th>
-              <th scope="col" className="px-4 py-3 font-bold">Admin</th>
+              <th scope="col" className="px-4 py-3 font-bold">
+                Empresa
+              </th>
+              <th scope="col" className="px-4 py-3 font-bold">
+                Status
+              </th>
+              <th scope="col" className="px-4 py-3 text-right font-bold">
+                Usuários
+              </th>
+              <th scope="col" className="px-4 py-3 font-bold">
+                Último acesso
+              </th>
+              <th scope="col" className="px-4 py-3 font-bold">
+                Admin
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y">

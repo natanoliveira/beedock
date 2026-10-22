@@ -1,19 +1,20 @@
 import type { AppShellTemplateProps } from "./AppShellTemplate.types";
 
-/** <md: cabeçalho + conteúdo + barra inferior. ≥md: sidebar fixa à esquerda. */
-export function AppShellTemplate({ header, navigation, banner, brandStyle, children }: AppShellTemplateProps) {
+/** Topo escuro sticky com faixa tape, marca, menu horizontal e conta; conteúdo centralizado (máx. 1240px). */
+export function AppShellTemplate({ brand, navigation, account, banner, brandStyle, children }: AppShellTemplateProps) {
   return (
-    <div style={brandStyle} className="min-h-dvh md:grid md:grid-cols-[264px_1fr]">
-      <aside className="bg-ink text-ink-foreground md:sticky md:top-0 md:flex md:h-dvh md:flex-col">
+    <div style={brandStyle} className="min-h-dvh">
+      <header className="bg-ink text-ink-foreground sticky top-0 z-30">
         <div aria-hidden className="tape h-1.5" />
-        <div className="px-4 pt-[max(env(safe-area-inset-top),12px)] pb-3 md:pt-5">{header}</div>
-        {/* navigation traz as duas versões: sidebar (≥md) e barra inferior fixa (<md) */}
-        <div className="md:bg-card md:text-foreground md:flex-1 md:overflow-y-auto md:px-3 md:py-4">{navigation}</div>
-      </aside>
-      <div className="min-w-0">
-        {banner}
-        <main className="mx-auto w-full max-w-5xl px-4 pt-4 pb-28 md:px-8 md:pt-8 md:pb-12">{children}</main>
-      </div>
+        <div className="mx-auto flex h-16 max-w-[1240px] items-center gap-3 px-4 md:px-8 lg:gap-7">
+          {brand}
+          <span aria-hidden className="hidden h-7 w-px bg-white/10 lg:block" />
+          {navigation}
+          {account}
+        </div>
+      </header>
+      {banner}
+      <main className="mx-auto w-full max-w-[1240px] px-4 pt-6 pb-12 md:px-8 md:pt-8 md:pb-14">{children}</main>
     </div>
   );
 }

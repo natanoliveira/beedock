@@ -22,6 +22,7 @@
 - Comprovante: `put(path, file, { access: "private" })`; `receiptUrl` guarda o **pathname**; nunca expor URL do Blob ao cliente. Tipos `image/jpeg|png|webp`, `application/pdf`; máx. 3_145_728 bytes. `serverActions.bodySizeLimit` = `"4mb"`.
 - `payerName`/`payerDocument` só em entradas; `payerDocument` só dígitos, CPF/CNPJ válido (`isValidDocument` de `lib/document.ts`); mascarado na auditoria (`maskPii` de `lib/logger.ts` ou máscara equivalente: manter 3 primeiros e 2 últimos dígitos).
 - eslint boundaries: molecules/organisms não importam `features/` nem `components/ui` (usar atoms wrappers; actions como props). Desktop-first; utilizável em 390px.
+- **Skeleton em todo carregamento** (pedido do usuário): cada rota da área logada com leitura de dados ganha `loading.tsx` com skeleton no formato da tela (tabela/cartões/cards do Início/listas de cadastro), usando `components/ui/skeleton.tsx` via atom wrapper; ações assíncronas na tela (trocar filtro/mês, paginar) mostram skeleton na área da lista em vez de spinner solto.
 - Textos em pt-BR. **Git:** nenhum agente executa `git add/commit/push/branch`; cada task só propõe a mensagem.
 - Integração: `set -a && source .env && set +a && TEST_DATABASE_URL="$DATABASE_URL" TEST_DIRECT_URL="$DIRECT_URL" pnpm vitest run <arquivo>` (dev DB por design; limpar o que criar; padrão de `tests/platform.test.ts`). O Blob é **mockado** nos testes (`vi.mock("@/features/transactions/storage")`) — nenhum teste sobe arquivo de verdade.
 

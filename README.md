@@ -16,14 +16,21 @@ Sistema web responsivo e mobile-first, com várias empresas isoladas por Row Lev
 
 ## Funcionalidades
 
-Estado atual: **Fase 1 — Fundação**.
+Estado atual: **Fase 3 — Lançamentos** (sobre a fundação da Fase 1 e o painel da Fase 2).
 
 - Login por e-mail e senha, com bloqueio após 5 tentativas, limite por IP e sessão revogável que expira por inatividade
 - Várias empresas com isolamento em duas camadas (aplicação + RLS no PostgreSQL)
 - Auditoria append-only com encadeamento SHA-256 por empresa e verificação por script
-- Design system "Colmeia & Doca" em Atomic Design, layout com barra inferior (celular) e sidebar (desktop)
+- Design system "Colmeia & Doca" em Atomic Design, menu no topo com gaveta no celular e barra de progresso de navegação
 
-Próximas fases: empresas e pessoas, lançamentos, clientes e pedidos, painel e relatórios, PWA (veja o Roadmap).
+- Lançamentos de entrada e saída (valor em centavos), com categoria, forma de pagamento, filtros por mês, tipo e categoria, edição e exclusão auditadas
+- Mês financeiro com dia de início configurável pela empresa (ex.: de 5/10 a 4/11)
+- Categorias e formas de pagamento por empresa (criar, renomear, desativar), gerenciadas pelo Admin
+- Comprovante privado: a imagem é reduzida no navegador e normalizada no servidor com `sharp`; PDFs também são aceitos. O arquivo vai para o Vercel Blob em modo private e só é entregue por uma rota autenticada que confere a empresa do usuário
+- Recibo em PDF do lançamento, gerado com `pdf-lib`
+- Barra de progresso fina no topo durante a navegação entre telas
+
+Próximas fases: clientes e pedidos, painel e relatórios, PWA (veja o Roadmap).
 
 ## Stack
 
@@ -36,6 +43,9 @@ Próximas fases: empresas e pessoas, lançamentos, clientes e pedidos, painel e 
 | Auth.js v5 | Login por credenciais; o JWT carrega só o id da sessão |
 | Argon2id (`@node-rs/argon2`) | Hash de senhas |
 | Tailwind CSS 4 + shadcn/ui | Interface e tokens de tema |
+| `pdf-lib` | Geração do recibo em PDF |
+| `sharp` | Validação e normalização de imagens de comprovante e logo |
+| Vercel Blob (private) | Armazenamento de comprovantes e logos |
 | Vitest | Testes de regras e de isolamento entre empresas |
 | ESLint + `eslint-plugin-boundaries` + Prettier | Qualidade e camadas do Atomic Design |
 | Vercel | Hospedagem |
@@ -118,7 +128,7 @@ pnpm dev              # http://localhost:3004
 | `AUTH_SECRET` | Chave de assinatura do JWT (32+ caracteres) | `openssl rand -base64 32` |
 | `AUTH_URL` | URL pública da aplicação | `http://localhost:3004` ou o domínio na Vercel |
 | `AUDIT_HMAC_KEY` | Chave HMAC da cadeia de auditoria. Fica só na aplicação, nunca no banco | `openssl rand -base64 32` |
-| `BLOB_READ_WRITE_TOKEN` | Opcional. Upload de logos; sem ele o upload fica indisponível | Vercel › Storage › Blob |
+| `BLOB_READ_WRITE_TOKEN` | Necessário para enviar comprovantes e logos: use um token real de um Blob store (um valor falso faz o upload falhar). Sem ele o upload fica indisponível, o resto do app funciona | Vercel › Storage › Blob |
 | `SEED_MASTER_NAME` / `SEED_MASTER_EMAIL` / `SEED_MASTER_PASSWORD` | Opcionais, juntos: o `db:seed` cria ou promove o MASTER | Você define |
 | `ENABLE_SIGNUP` | Cadastro público (desligado) | `false` |
 | `TEST_DATABASE_URL` / `TEST_DIRECT_URL` | Banco dos testes de isolamento (opcional) | Branch de teste do Neon |
@@ -157,7 +167,7 @@ O Neon mantém histórico para point-in-time restore (a janela depende do plano)
 
 - [x] Fase 1: fundação (auth, RLS, auditoria, design system, layout responsivo, CI)
 - [ ] Fase 2: painel da plataforma, configurações da empresa, funcionários e convites, aceite de termos
-- [ ] Fase 3: lançamentos com comprovante e filtros
+- [x] Fase 3: lançamentos com comprovante privado, recibo em PDF, mês financeiro, categorias e formas de pagamento, filtros
 - [ ] Fase 4: clientes (LGPD) e pedidos com recebimentos
 - [ ] Fase 5: Início, relatório mensal (PDF/CSV) e telas de auditoria
 - [ ] PWA: manifest, instalação no Android e no iPhone, modo offline

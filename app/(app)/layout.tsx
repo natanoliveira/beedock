@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { AppNavigation } from "@/components/organisms/AppNavigation";
+import { OrgAccount } from "@/components/organisms/OrgAccount";
 import { OrgHeader } from "@/components/organisms/OrgHeader";
 import { AppShellTemplate } from "@/components/templates/AppShellTemplate";
 import { logoutAction } from "@/features/auth/actions";
@@ -19,15 +20,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <AppShellTemplate
       brandStyle={brandStyle}
-      header={
-        <OrgHeader
-          organizationName={org.name}
-          logoUrl={org.logoUrl}
-          userName={session.user.name}
-          roleLabel={ROLE_LABELS[role]}
-          logoutAction={logoutAction}
-        />
-      }
+      brand={<OrgHeader organizationName={org.name} logoUrl={org.logoUrl} />}
+      account={<OrgAccount userName={session.user.name} roleLabel={ROLE_LABELS[role]} logoutAction={logoutAction} />}
       navigation={
         <AppNavigation
           showReports={can(role, "report.view")}

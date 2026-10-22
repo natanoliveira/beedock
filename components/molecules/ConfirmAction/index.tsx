@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import { toast } from "sonner";
 import { AppButton } from "@/components/atoms/AppButton";
 import { AppDialog, AppDialogContent, AppDialogDescription, AppDialogHeader, AppDialogTitle } from "@/components/atoms/AppDialog";
@@ -14,11 +14,15 @@ type Props = {
   confirmLabel: string;
   successMessage: string;
   danger?: boolean;
+  /** Campo "Motivo" (padrão: sim). Sem ele, onConfirm é chamado sem argumentos. */
+  withReason?: boolean;
+  /** Gatilho próprio (ex.: botão compacto numa linha de tabela). */
+  renderTrigger?: (open: () => void) => ReactNode;
   /** Server action já com os argumentos fixos; recebe o motivo opcional. */
   onConfirm: (reason?: string) => Promise<{ ok?: boolean; error?: string; fieldErrors?: Record<string, string> }>;
 };
 
-export function ConfirmAction({ triggerLabel, title, description, confirmLabel, successMessage, danger, onConfirm }: Props) {
+export function ConfirmAction({ triggerLabel, title, description, confirmLabel, successMessage, danger, withReason = true, renderTrigger, onConfirm }: Props) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [pending, start] = useTransition();
@@ -38,6 +42,7 @@ export function ConfirmAction({ triggerLabel, title, description, confirmLabel, 
 
   const body = (
     <div className="grid gap-4">
+      {withReason && (
       <div className="grid gap-1.5">
         <label htmlFor="confirm-reason" className="font-heading text-sm font-bold [font-stretch:100%]">
           Motivo (opcional)
@@ -52,6 +57,7 @@ export function ConfirmAction({ triggerLabel, title, description, confirmLabel, 
         />
         <p className="text-muted-foreground text-sm">Fica registrado na auditoria.</p>
       </div>
+      )}
       <div className="flex flex-col-reverse gap-2 md:flex-row md:justify-end">
         <AppButton type="button" tone="outline" onClick={() => setOpen(false)} disabled={pending}>
           Cancelar
@@ -65,9 +71,13 @@ export function ConfirmAction({ triggerLabel, title, description, confirmLabel, 
 
   return (
     <>
-      <AppButton type="button" tone={danger ? "danger" : "outline"} onClick={() => setOpen(true)}>
-        {triggerLabel}
-      </AppButton>
+      {renderTrigger ? (
+        renderTrigger(() => setOpen(true))
+      ) : (
+        <AppButton type="button" tone={danger ? "danger" : "outline"} onClick={() => setOpen(true)}>
+          {triggerLabel}
+        </AppButton>
+      )}
       {desktop ? (
         <AppDialog open={open} onOpenChange={setOpen}>
           <AppDialogContent>

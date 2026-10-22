@@ -24,7 +24,17 @@ type Props = {
   logo?: ReactNode;
 };
 
-const TIMEZONES = ["America/Fortaleza", "America/Sao_Paulo", "America/Manaus", "America/Cuiaba", "America/Belem", "America/Recife", "America/Bahia", "America/Rio_Branco", "America/Noronha"];
+const TIMEZONES = [
+  "America/Fortaleza",
+  "America/Sao_Paulo",
+  "America/Manaus",
+  "America/Cuiaba",
+  "America/Belem",
+  "America/Recife",
+  "America/Bahia",
+  "America/Rio_Branco",
+  "America/Noronha",
+];
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
   return (
@@ -63,7 +73,13 @@ export function OrganizationForm({ mode, action, defaults, logo }: Props) {
     if (cep.length !== 8) return;
     try {
       const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-      const d = (await r.json()) as { erro?: boolean; logradouro?: string; bairro?: string; localidade?: string; uf?: string };
+      const d = (await r.json()) as {
+        erro?: boolean;
+        logradouro?: string;
+        bairro?: string;
+        localidade?: string;
+        uf?: string;
+      };
       if (d.erro) return;
       const set = (n: string, v?: string) => {
         const el = form?.elements.namedItem(n);
@@ -130,7 +146,9 @@ export function OrganizationForm({ mode, action, defaults, logo }: Props) {
         {f("state", "UF", { maxLength: 2, autoCapitalize: "characters" })}
       </Section>
 
-      <Section title="Pix">{f("pixKey", "Chave Pix", { hint: "CPF, CNPJ, e-mail, telefone ou chave aleatória." })}</Section>
+      <Section title="Pix">
+        {f("pixKey", "Chave Pix", { hint: "CPF, CNPJ, e-mail, telefone ou chave aleatória." })}
+      </Section>
 
       <Section title="Marca">
         {logo}
@@ -157,27 +175,52 @@ export function OrganizationForm({ mode, action, defaults, logo }: Props) {
       </Section>
 
       <Section title="Preferências">
-        {f("settings.monthStartDay", "Dia de início do mês", { type: "number", inputMode: "numeric", min: 1, max: 28, defaultValue: val("settings.monthStartDay") || "1" })}
+        {f("settings.monthStartDay", "Dia de início do mês", {
+          type: "number",
+          inputMode: "numeric",
+          min: 1,
+          max: 28,
+          defaultValue: val("settings.monthStartDay") || "1",
+        })}
         <div>
-          {f("settings.timezone", "Fuso horário", { list: "tz-list", defaultValue: val("settings.timezone") || "America/Fortaleza" })}
+          {f("settings.timezone", "Fuso horário", {
+            list: "tz-list",
+            defaultValue: val("settings.timezone") || "America/Fortaleza",
+          })}
           <datalist id="tz-list">
             {TIMEZONES.map((t) => (
               <option key={t} value={t} />
             ))}
           </datalist>
         </div>
-        {f("settings.sessionIdleMinutes", "Ociosidade da sessão (min)", { type: "number", inputMode: "numeric", defaultValue: val("settings.sessionIdleMinutes") || "60" })}
-        {f("settings.customerRetentionMonths", "Retenção de clientes (meses)", { type: "number", inputMode: "numeric", defaultValue: val("settings.customerRetentionMonths") || "24" })}
+        {f("settings.sessionIdleMinutes", "Ociosidade da sessão (min)", {
+          type: "number",
+          inputMode: "numeric",
+          defaultValue: val("settings.sessionIdleMinutes") || "60",
+        })}
+        {f("settings.customerRetentionMonths", "Retenção de clientes (meses)", {
+          type: "number",
+          inputMode: "numeric",
+          defaultValue: val("settings.customerRetentionMonths") || "24",
+        })}
         {f("settings.dpoName", "DPO — nome")}
         {f("settings.dpoEmail", "DPO — e-mail", { type: "email", inputMode: "email" })}
         {f("settings.dpoPhone", "DPO — telefone", { type: "tel", inputMode: "tel" })}
       </Section>
 
       {mode === "create" && (
-        <Section title="Admin da empresa" hint="Recebe um link de convite válido por 48 horas para criar a própria senha.">
+        <Section
+          title="Admin da empresa"
+          hint="Recebe um link de convite válido por 48 horas para criar a própria senha."
+        >
           {f("admin.name", "Nome *", { autoComplete: "off", required: true })}
           {f("admin.email", "E-mail *", { type: "email", inputMode: "email", autoComplete: "off", required: true })}
-          {f("admin.phone", "Telefone (WhatsApp)", { type: "tel", inputMode: "tel", autoComplete: "off", hint: "Habilita o botão de envio pelo WhatsApp." })}
+          {f("admin.phone", "Telefone (WhatsApp)", {
+            type: "tel",
+            inputMode: "tel",
+            autoComplete: "off",
+            hint: "Habilita o botão de envio pelo WhatsApp.",
+          })}
         </Section>
       )}
 
