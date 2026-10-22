@@ -12,7 +12,8 @@ export async function platformActor(): Promise<PlatformActor> {
     userName: session.user.name,
     isMaster: session.user.isMaster,
     role: session.user.isMaster ? "MASTER" : session.role,
-    organizationId: session.organization?.id ?? null,
+    // MASTER: ações da plataforma passam a empresa explicitamente
+    organizationId: session.user.isMaster ? null : (session.organization?.id ?? null),
     meta: requestMeta(await headers()),
   };
 }

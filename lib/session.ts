@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import type { MemberRole } from "@/generated/prisma/enums";
-import type { TenantContext } from "@/lib/audit";
+import type { RequestMeta, TenantContext } from "@/lib/audit";
 import { auth } from "@/lib/auth";
 import { db, withScope } from "@/lib/db";
 import { requestMeta } from "@/lib/request";
@@ -15,13 +15,12 @@ export type CurrentSession = {
   user: { id: string; name: string; email: string; isMaster: boolean };
   organization: { id: string; name: string; logoUrl: string | null; primaryColor: string } | null;
   role: MemberRole | null;
+  /** MASTER dentro da empresa sem vínculo próprio: age como ADMIN, auditado como MASTER. */
+  actingAsMaster: boolean;
 };
 
 /** Sessão validada no banco: revogada, expirada, ociosa ou empresa suspensa = sem sessão. */
-export const getCurrentSession = cache(async (): Promise<CurrentSession | null> => {
-  const sid = (await auth())?.sid;
-  if (!sid) return null;
-
+export async function loadSession(sid: string): Promise<CurrentSession | null> {
   const row = await db.session.findUnique({
     where: { id: sid },
     include: { user: true, organization: true },
@@ -39,6 +38,7 @@ export const getCurrentSession = cache(async (): Promise<CurrentSession | null> 
 
   const isMaster = row.user.platformRole === "MASTER";
   let role: MemberRole | null = null;
+  let actingAsMaster = false;
   if (row.organization) {
     if (row.organization.status !== "ACTIVE") return null;
     const organizationId = row.organization.id;
@@ -46,7 +46,11 @@ export const getCurrentSession = cache(async (): Promise<CurrentSession | null> 
       tx.membership.findUnique({ where: { userId_organizationId: { userId: row.userId, organizationId } } }),
     );
     if (!membership?.active && !isMaster) return null;
-    role = membership?.active ? membership.role : null;
+    if (membership?.active) role = membership.role;
+    else {
+      role = "ADMIN";
+      actingAsMaster = true;
+    }
   } else if (!isMaster) {
     return null;
   }
@@ -65,22 +69,34 @@ export const getCurrentSession = cache(async (): Promise<CurrentSession | null> 
       primaryColor: row.organization.primaryColor,
     },
     role,
+    actingAsMaster,
   };
+}
+
+export const getCurrentSession = cache(async (): Promise<CurrentSession | null> => {
+  const sid = (await auth())?.sid;
+  return sid ? loadSession(sid) : null;
 });
 
-/** Contexto de empresa para Server Actions e páginas da área logada. */
-export async function requireTenant(): Promise<TenantContext & { session: CurrentSession }> {
-  const session = await getCurrentSession();
-  if (!session) redirect("/login");
-  if (!session.organization || !session.role) redirect(session.user.isMaster ? "/plataforma" : "/login");
+export function toTenantContext(session: CurrentSession, meta: RequestMeta): TenantContext & { session: CurrentSession } {
+  if (!session.organization || !session.role) throw new Error("Sessão sem empresa.");
   return {
     session,
     userId: session.user.id,
     userName: session.user.name,
     organizationId: session.organization.id,
     role: session.role,
-    meta: requestMeta(await headers()),
+    auditRole: session.actingAsMaster ? "MASTER" : undefined,
+    meta,
   };
+}
+
+/** Contexto de empresa para Server Actions e páginas da área logada. */
+export async function requireTenant(): Promise<TenantContext & { session: CurrentSession }> {
+  const session = await getCurrentSession();
+  if (!session) redirect("/login");
+  if (!session.organization || !session.role) redirect(session.user.isMaster ? "/plataforma" : "/login");
+  return toTenantContext(session, requestMeta(await headers()));
 }
 
 export async function requireMaster(): Promise<CurrentSession> {

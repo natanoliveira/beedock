@@ -14,6 +14,8 @@ export type Actor = {
   userId: string | null;
   userName: string | null;
   role: string | null;
+  /** Papel gravado na auditoria quando difere do papel de permissão (ex.: MASTER dentro da empresa). */
+  auditRole?: string;
   organizationId: string | null;
   meta: RequestMeta;
 };
@@ -131,7 +133,7 @@ export async function appendAudit(tx: AuditTx, actor: Actor, event: AuditEvent) 
     organizationId: actor.organizationId,
     userId: actor.userId,
     userName: actor.userName,
-    userRole: actor.role,
+    userRole: actor.auditRole ?? actor.role,
     action: event.action,
     entityType: event.entityType ?? null,
     entityId: event.entityId ?? null,
