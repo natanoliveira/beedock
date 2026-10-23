@@ -1,5 +1,33 @@
 import { createHash } from "node:crypto";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+
+// Simula documento publicado sem gravar LegalDocument (publicar de verdade bloquearia o dev em /aceite)
+const legal = vi.hoisted(() => ({
+  docs: null as null | { id: string; type: "TERMS"; version: number }[],
+  calls: [] as { userId: string; ids: string[] }[],
+}));
+vi.mock("@/features/legal/service", async (importOriginal) => {
+  const real = await importOriginal<typeof import("@/features/legal/service")>();
+  const audit = await import("@/lib/audit");
+  return {
+    ...real,
+    currentLegalDocuments: ((client: Parameters<typeof real.currentLegalDocuments>[0]) =>
+      legal.docs ? Promise.resolve(legal.docs) : real.currentLegalDocuments(client)) as typeof real.currentLegalDocuments,
+    acceptLegalDocumentsTx: (async (
+      tx: Parameters<typeof real.acceptLegalDocumentsTx>[0],
+      actor: Parameters<typeof real.acceptLegalDocumentsTx>[1],
+      ids: string[],
+    ) => {
+      legal.calls.push({ userId: actor.userId, ids });
+      await audit.appendPlatformAudit(tx, actor, {
+        action: "auth.terms_accept",
+        entityType: "User",
+        entityId: actor.userId,
+        after: { documents: ids },
+      });
+    }) as typeof real.acceptLegalDocumentsTx,
+  };
+});
 
 const APP_URL = process.env.TEST_DATABASE_URL;
 const OWNER_URL = process.env.TEST_DIRECT_URL;
@@ -208,7 +236,9 @@ describe.skipIf(!APP_URL || !OWNER_URL)("service de empresas", () => {
       expect(all[1]!.tokenHash).toBe(svc.hashToken(tokenOf(inviteUrl)));
     });
 
-    it("findInvitation: válido devolve dados; inválidos devolvem null e auditam", async () => {
+    it("findInvitation: válido devolve dados; inválidos devolvem null e auditam", async (ctx) => {
+      // requireTerms depende do banco: com documento publicado (dev) vira true; o caminho com documento é da Task 4/9
+      if ((await owner.legalDocument.count()) > 0) return ctx.skip();
       const e = email("find");
       const { organizationId, inviteUrl } = await create(`s-${suffix}`, e);
       const m = freshMeta();
@@ -217,6 +247,7 @@ describe.skipIf(!APP_URL || !OWNER_URL)("service de empresas", () => {
         name: "Admin Teste",
         email: e,
         existingUser: false,
+        requireTerms: false,
       });
       const e2 = email("find-ex");
       const exInv = await create(`fx-${suffix}`, e2);
@@ -251,7 +282,7 @@ describe.skipIf(!APP_URL || !OWNER_URL)("service de empresas", () => {
       const { organizationId, inviteUrl } = await create(`t-${suffix}`, e);
       const token = tokenOf(inviteUrl);
       const m = freshMeta();
-      expect(await inv.acceptInvitation({ token, password: "senha-segura-123" }, m)).toEqual({ ok: true, email: e, existingUser: false });
+      expect(await inv.acceptInvitation({ token, password: "senha-segura-123", acceptTerms: false }, m)).toEqual({ ok: true, email: e, existingUser: false });
       await track(e);
       const u = await owner.user.findUnique({ where: { email: e }, include: { memberships: true } });
       expect(u?.platformRole).toBe("USER");
@@ -261,9 +292,43 @@ describe.skipIf(!APP_URL || !OWNER_URL)("service de empresas", () => {
       const actions = (await owner.auditLog.findMany({ where: { organizationId } })).map((l) => l.action);
       expect(actions).toContain("invitation.accept");
       expect(actions).toContain("member.create");
-      expect(await inv.acceptInvitation({ token, password: "senha-segura-123" }, m)).toMatchObject({ ok: false });
+      expect(await inv.acceptInvitation({ token, password: "senha-segura-123", acceptTerms: false }, m)).toMatchObject({ ok: false });
       const again = await members.inviteMember(master, organizationId, { ...adminInput(email("novo")), role: "ADMIN" });
       expect(again.inviteUrl).toContain("/convite/");
+    });
+
+    it("com documento publicado: sem aceite reverte o convite; com aceite audita na cadeia da plataforma", async () => {
+      const e = email("terms");
+      const { organizationId, inviteUrl } = await create(`tm-${suffix}`, e);
+      const token = tokenOf(inviteUrl);
+      const input = { token, password: "senha-segura-123" };
+      legal.docs = [{ id: "fake-terms", type: "TERMS", version: 1 }];
+      legal.calls.length = 0;
+      try {
+        expect(await inv.acceptInvitation({ ...input, acceptTerms: false }, freshMeta())).toEqual({
+          ok: false,
+          reason: "terms",
+        });
+        expect((await owner.invitation.findFirstOrThrow({ where: { organizationId } })).acceptedAt).toBeNull();
+        expect(await owner.user.count({ where: { email: e } })).toBe(0);
+        expect(await owner.membership.count({ where: { organizationId } })).toBe(0);
+        expect(await owner.auditLog.count({ where: { organizationId, action: "invitation.accept" } })).toBe(0);
+        expect(legal.calls).toHaveLength(0);
+
+        const before = await owner.auditLog.count({ where: { organizationId: null, action: "auth.terms_accept" } });
+        expect(await inv.acceptInvitation({ ...input, acceptTerms: true }, freshMeta())).toMatchObject({ ok: true });
+        await track(e);
+        const u = await owner.user.findUniqueOrThrow({ where: { email: e } });
+        expect(legal.calls).toEqual([{ userId: u.id, ids: ["fake-terms"] }]);
+        expect(
+          await owner.auditLog.count({ where: { organizationId: null, action: "auth.terms_accept", entityId: u.id } }),
+        ).toBe(1);
+        expect(await owner.auditLog.count({ where: { organizationId: null, action: "auth.terms_accept" } })).toBe(
+          before + 1,
+        );
+      } finally {
+        legal.docs = null;
+      }
     });
 
     it("aceite concorrente: exatamente um ok", async () => {
@@ -271,8 +336,8 @@ describe.skipIf(!APP_URL || !OWNER_URL)("service de empresas", () => {
       const { inviteUrl } = await create(`u-${suffix}`, e);
       const token = tokenOf(inviteUrl);
       const res = await Promise.all([
-        inv.acceptInvitation({ token, password: "senha-segura-123" }, freshMeta()),
-        inv.acceptInvitation({ token, password: "senha-segura-123" }, freshMeta()),
+        inv.acceptInvitation({ token, password: "senha-segura-123", acceptTerms: false }, freshMeta()),
+        inv.acceptInvitation({ token, password: "senha-segura-123", acceptTerms: false }, freshMeta()),
       ]);
       await track(e);
       expect(res.filter((r) => r.ok)).toHaveLength(1);
@@ -294,7 +359,7 @@ describe.skipIf(!APP_URL || !OWNER_URL)("service de empresas", () => {
       const t = await lateUser("late");
       const before = t.u.passwordHash;
       const m = freshMeta();
-      expect(await inv.acceptInvitation({ token: t.token, password: "senha-do-convite-1" }, m)).toEqual({
+      expect(await inv.acceptInvitation({ token: t.token, password: "senha-do-convite-1", acceptTerms: false }, m)).toEqual({
         ok: false,
         reason: "password",
       });
@@ -309,7 +374,7 @@ describe.skipIf(!APP_URL || !OWNER_URL)("service de empresas", () => {
     it("aceite por quem já tem conta: senha certa vincula com o papel do convite e não troca a senha", async () => {
       const t = await lateUser("late2", "FUNCIONARIO");
       await owner.user.update({ where: { id: t.u.id }, data: { failedLoginCount: 3 } });
-      expect(await inv.acceptInvitation({ token: t.token, password: "senha-atual-123" }, freshMeta())).toEqual({
+      expect(await inv.acceptInvitation({ token: t.token, password: "senha-atual-123", acceptTerms: false }, freshMeta())).toEqual({
         ok: true,
         email: t.e,
         existingUser: true,
@@ -326,11 +391,11 @@ describe.skipIf(!APP_URL || !OWNER_URL)("service de empresas", () => {
       const t = await lateUser("late3");
       const m = freshMeta();
       const res = [];
-      for (let i = 0; i < 5; i++) res.push(await inv.acceptInvitation({ token: t.token, password: `errada-numero-${i}` }, m));
+      for (let i = 0; i < 5; i++) res.push(await inv.acceptInvitation({ token: t.token, password: `errada-numero-${i}`, acceptTerms: false }, m));
       expect(res.slice(0, 4).every((r) => !r.ok && r.reason === "password")).toBe(true);
       expect(res[4]).toEqual({ ok: false, reason: "locked" });
       expect((await owner.user.findUniqueOrThrow({ where: { id: t.u.id } })).lockedUntil).not.toBeNull();
-      expect(await inv.acceptInvitation({ token: t.token, password: "senha-atual-123" }, m)).toEqual({ ok: false, reason: "locked" });
+      expect(await inv.acceptInvitation({ token: t.token, password: "senha-atual-123", acceptTerms: false }, m)).toEqual({ ok: false, reason: "locked" });
       expect((await owner.invitation.findFirst({ where: { organizationId: t.organizationId } }))?.acceptedAt).toBeNull();
     });
 
@@ -341,7 +406,7 @@ describe.skipIf(!APP_URL || !OWNER_URL)("service de empresas", () => {
       const { IP_MAX_FAILURES } = await import("@/features/auth/service");
       const anon = { userId: null, userName: null, role: null, organizationId: null, meta: m };
       for (let i = 0; i < IP_MAX_FAILURES; i++) await recordAudit(anon, { action: "auth.login_failed", result: "FAILED" });
-      expect(await inv.acceptInvitation({ token: t.token, password: "senha-atual-123" }, m)).toEqual({ ok: false, reason: "locked" });
+      expect(await inv.acceptInvitation({ token: t.token, password: "senha-atual-123", acceptTerms: false }, m)).toEqual({ ok: false, reason: "locked" });
       expect((await owner.invitation.findFirst({ where: { organizationId: t.organizationId } }))?.acceptedAt).toBeNull();
       expect(await owner.membership.count({ where: { organizationId: t.organizationId } })).toBe(0);
     });
@@ -349,7 +414,7 @@ describe.skipIf(!APP_URL || !OWNER_URL)("service de empresas", () => {
     it("vínculo inativo reativa com o papel do convite", async () => {
       const t = await lateUser("late4", "FUNCIONARIO");
       await owner.membership.create({ data: { userId: t.u.id, organizationId: t.organizationId, role: "ADMIN", active: false } });
-      expect((await inv.acceptInvitation({ token: t.token, password: "senha-atual-123" }, freshMeta())).ok).toBe(true);
+      expect((await inv.acceptInvitation({ token: t.token, password: "senha-atual-123", acceptTerms: false }, freshMeta())).ok).toBe(true);
       expect(await owner.membership.findFirstOrThrow({ where: { userId: t.u.id, organizationId: t.organizationId } })).toMatchObject({
         active: true,
         role: "FUNCIONARIO",
@@ -359,7 +424,7 @@ describe.skipIf(!APP_URL || !OWNER_URL)("service de empresas", () => {
 
     it("senha curta para e-mail novo -> invalid", async () => {
       const { inviteUrl } = await create(`short-${suffix}`);
-      expect(await inv.acceptInvitation({ token: tokenOf(inviteUrl), password: "curta" }, freshMeta())).toEqual({
+      expect(await inv.acceptInvitation({ token: tokenOf(inviteUrl), password: "curta", acceptTerms: false }, freshMeta())).toEqual({
         ok: false,
         reason: "invalid",
       });
@@ -385,7 +450,7 @@ describe.skipIf(!APP_URL || !OWNER_URL)("service de empresas", () => {
       const token = inviteUrl!.split("/convite/")[1]!;
       const inv = await import("@/features/platform/invitations");
       const m = { ip: `2001:db8::${suffix}:s${tag}`, userAgent: "vitest", requestId: null };
-      await inv.acceptInvitation({ token, password: "senha-segura-123" }, m);
+      await inv.acceptInvitation({ token, password: "senha-segura-123", acceptTerms: false }, m);
       const u = await owner.user.findUniqueOrThrow({ where: { email: e } });
       userIds.push(u.id);
       const mk = () =>

@@ -160,6 +160,26 @@ export async function appendAudit(tx: AuditTx, actor: Actor, event: AuditEvent) 
 }
 
 /**
+ * Evento da cadeia da plataforma (organizationId null) dentro de qualquer tx. Em tx de empresa a RLS
+ * esconde as linhas de plataforma, então o prevHash sairia errado: liga a visão de plataforma só
+ * durante o append e restaura o valor anterior.
+ */
+export async function appendPlatformAudit(tx: Tx, actor: Actor, event: AuditEvent): Promise<void> {
+  const [{ prev }] = await tx.$queryRaw<
+    { prev: string | null }[]
+  >`SELECT current_setting('app.platform', true) AS prev`;
+  await tx.$executeRaw`SELECT set_config('app.platform', 'on', true)`;
+  try {
+    await appendAudit(tx, { ...actor, organizationId: null }, event);
+  } catch (e) {
+    // tx abortada (25P02) recusa o restore; o erro original é o que importa
+    await tx.$executeRaw`SELECT set_config('app.platform', ${prev ?? ""}, true)`.catch(() => {});
+    throw e;
+  }
+  await tx.$executeRaw`SELECT set_config('app.platform', ${prev ?? ""}, true)`;
+}
+
+/**
  * Executa a escrita e grava o evento na MESMA transação. Se a auditoria
  * falhar, nada é gravado.
  */

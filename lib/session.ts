@@ -7,6 +7,7 @@ import type { RequestMeta, TenantContext } from "@/lib/audit";
 import { auth } from "@/lib/auth";
 import { db, withScope } from "@/lib/db";
 import { requestMeta } from "@/lib/request";
+import { hasPendingLegalDocuments } from "@/features/legal/service";
 
 const TOUCH_AFTER_MS = 60_000;
 
@@ -17,6 +18,8 @@ export type CurrentSession = {
   role: MemberRole | null;
   /** MASTER dentro da empresa sem vínculo próprio: age como ADMIN, auditado como MASTER. */
   actingAsMaster: boolean;
+  /** Há termos/privacidade vigentes não aceitos. MASTER é isento (sempre false). */
+  pendingTerms: boolean;
 };
 
 /** Sessão validada no banco: revogada, expirada, ociosa ou empresa suspensa = sem sessão. */
@@ -59,6 +62,8 @@ export async function loadSession(sid: string): Promise<CurrentSession | null> {
     await db.session.update({ where: { id: sid }, data: { lastSeenAt: new Date() } });
   }
 
+  const pendingTerms = !isMaster && (await hasPendingLegalDocuments(row.userId));
+
   return {
     sessionId: row.id,
     user: { id: row.user.id, name: row.user.name, email: row.user.email, isMaster },
@@ -70,6 +75,7 @@ export async function loadSession(sid: string): Promise<CurrentSession | null> {
     },
     role,
     actingAsMaster,
+    pendingTerms,
   };
 }
 
@@ -91,17 +97,23 @@ export function toTenantContext(session: CurrentSession, meta: RequestMeta): Ten
   };
 }
 
-/** Contexto de empresa para Server Actions e páginas da área logada. */
-export async function requireTenant(): Promise<TenantContext & { session: CurrentSession }> {
+/** Guard único da área logada: sem sessão → /login; termos pendentes → /aceite. */
+export async function requireAcceptedSession(): Promise<CurrentSession> {
   const session = await getCurrentSession();
   if (!session) redirect("/login");
+  if (session.pendingTerms) redirect("/aceite");
+  return session;
+}
+
+/** Contexto de empresa para Server Actions e páginas da área logada. */
+export async function requireTenant(): Promise<TenantContext & { session: CurrentSession }> {
+  const session = await requireAcceptedSession();
   if (!session.organization || !session.role) redirect(session.user.isMaster ? "/plataforma" : "/login");
   return toTenantContext(session, requestMeta(await headers()));
 }
 
 export async function requireMaster(): Promise<CurrentSession> {
-  const session = await getCurrentSession();
-  if (!session) redirect("/login");
+  const session = await requireAcceptedSession();
   if (!session.user.isMaster) redirect("/inicio");
   return session;
 }

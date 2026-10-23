@@ -1,3 +1,4 @@
+import { LegalLinks } from "@/components/molecules/LegalLinks";
 import type { AppShellTemplateProps } from "./AppShellTemplate.types";
 
 /** Topo escuro sticky com faixa tape, marca, menu horizontal e conta; conteúdo centralizado (máx. 1240px). */
@@ -15,6 +16,9 @@ export function AppShellTemplate({ brand, navigation, account, banner, brandStyl
       </header>
       {banner}
       <main className="mx-auto w-full max-w-[1240px] px-4 pt-6 pb-12 md:px-8 md:pt-8 md:pb-14">{children}</main>
+      <footer className="mx-auto max-w-[1240px] px-4 pb-6 md:px-8">
+        <LegalLinks />
+      </footer>
     </div>
   );
 }

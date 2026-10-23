@@ -5,7 +5,7 @@
  * - createOrganizationAction: campos da empresa com o nome do schema (name, slug, ..., "settings.monthStartDay", ...)
  *   e campos do Admin com prefixo "admin." (admin.name, admin.email, admin.phone). fieldErrors usa as mesmas chaves.
  * - updateOrganizationAction: igual, sem "admin.*".
- * - acceptInvitationAction: token (hidden), password, confirm. Sem "confirm" = conta existente (só token e password).
+ * - acceptInvitationAction: token (hidden), password, confirm, terms ("on" = aceito). Sem "confirm" = conta existente (só token e password).
  */
 
 import { cookies, headers } from "next/headers";
@@ -129,12 +129,14 @@ export async function acceptInvitationAction(_prev: FormState, fd: FormData): Pr
   const parsed = (fd.has("confirm") ? acceptInviteSchema : acceptExistingInviteSchema).safeParse(formDataToObject(fd));
   if (!parsed.success) return toState(parsed.error);
   const result = await acceptInvitation(
-    { token: parsed.data.token, password: parsed.data.password },
+    { token: parsed.data.token, password: parsed.data.password, acceptTerms: fd.get("terms") === "on" },
     requestMeta(await headers()),
   );
   if (!result.ok) {
     if (result.reason === "password") return { fieldErrors: { password: "Senha incorreta." } };
     if (result.reason === "locked") return { error: LOCKED };
+    if (result.reason === "terms")
+      return { fieldErrors: { terms: "Aceite os Termos de Uso e a Política de Privacidade." } };
     return { error: "Convite inválido ou expirado. Peça um novo ao suporte." };
   }
   redirect(`/login?convite=${result.existingUser ? "vinculado" : "aceito"}&email=${encodeURIComponent(result.email)}`);

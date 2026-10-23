@@ -1,12 +1,10 @@
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import { requestMeta } from "@/lib/request";
-import { getCurrentSession } from "@/lib/session";
+import { requireAcceptedSession } from "@/lib/session";
 import type { PlatformActor } from "./service";
 
 export async function platformActor(): Promise<PlatformActor> {
-  const session = await getCurrentSession();
-  if (!session) redirect("/login");
+  const session = await requireAcceptedSession();
   return {
     userId: session.user.id,
     userName: session.user.name,

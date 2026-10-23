@@ -212,7 +212,7 @@ describe.skipIf(!APP_URL || !OWNER_URL)("equipe: papéis, desativação e víncu
 
     const { inviteUrl } = await svc.inviteMember(a1, X, { name: "Aceita", email: `acc-${suffix}@teste.local`, role: "FUNCIONARIO" });
     const inv = await import("@/features/platform/invitations");
-    expect(await inv.acceptInvitation({ token: inviteUrl.split("/convite/")[1], password: "senha-segura-123" }, { ...meta, ip: `2001:db8::${suffix}:m1` })).toMatchObject({ ok: true, existingUser: false });
+    expect(await inv.acceptInvitation({ token: inviteUrl.split("/convite/")[1], password: "senha-segura-123", acceptTerms: false }, { ...meta, ip: `2001:db8::${suffix}:m1` })).toMatchObject({ ok: true, existingUser: false });
     const created = await owner.user.findUniqueOrThrow({ where: { email: `acc-${suffix}@teste.local` }, include: { memberships: true } });
     userIds.push(created.id);
     expect(created.memberships[0]).toMatchObject({ organizationId: X, role: "FUNCIONARIO" });

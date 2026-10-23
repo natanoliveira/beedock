@@ -1,5 +1,5 @@
 ---
-last_mapped: 2026-10-22T15:56:09Z
+last_mapped: 2026-10-22T23:10:08Z
 total_files: 202
 total_tokens: 170571
 ---
@@ -42,15 +42,16 @@ graph TB
 
 ```
 app/                     rotas (App Router)
-  (auth)/                login, convite/[token]  — públicas, AuthTemplate 50/50
+  (auth)/                login, convite/[token] (caixa de aceite dos termos), aceite (termos pendentes; sem guard de termos) — AuthTemplate 50/50
+  (public)/              termos, privacidade — públicas, dinâmicas (`await connection()`), mostram a versão vigente ou "Documento ainda não publicado."
   (app)/                 área da empresa — layout chama requireTenant()
     inicio/ lancamentos/ (+[id]/comprovante, [id]/recibo.pdf route handlers)
-    configuracoes/ (categorias, formas-de-pagamento, equipe=ADMIN, auditoria=placeholder)
+    configuracoes/ (empresa=ADMIN, categorias, formas-de-pagamento, equipe=ADMIN, auditoria=placeholder)
     clientes/ pedidos/ relatorios/   placeholders (Fases 4–5)
-  (plataforma)/plataforma/  painel MASTER — layout chama requireMaster(); empresas/, usuarios/ (+[id])
+  (plataforma)/plataforma/  painel MASTER — layout chama requireMaster(); empresas/, usuarios/ (+[id]), termos/ (publicar Termos/Privacidade, versão vigente e nº de aceites)
   api/auth/[...nextauth]/   único API route
 features/                domínio (sem importar components/app — lint)
-  auth/ platform/ members/ transactions/ catalog/ organizations/ shared/
+  auth/ platform/ members/ transactions/ catalog/ organizations/ (service, logo, actions, schemas, defaults) legal/ (service, rules, schemas, templates, actions) shared/
 lib/                     infraestrutura (db, tenant, audit, auth, session, permissions, env, logger…)
 components/              Atomic Design: ui (shadcn cru) → atoms → molecules → organisms → templates
 hooks/use-media-query.ts único hook
@@ -69,12 +70,13 @@ prompt-beedock.md        spec original do produto
 |---|---|
 | `db.ts` | PrismaClient + extensão: model tenant fora de `withScope` lança; `withScope(scope, fn)` = `$transaction` + `set_config('app.current_org'|'app.platform', …, true)`; `assertRlsRole()` falha se role ignora RLS |
 | `tenant.ts` | `TENANT_MODELS`, `scopeArgs` (força `organizationId` no where, bloqueia org divergente no data), `TenantViolationError` |
-| `audit.ts` | `appendAudit` (advisory lock por org, prevHash, HMAC-SHA256, `sanitize`), `withAudit(ctx, event, fn)` (escrita + auditoria na mesma tx), `recordAudit`, `authorize` (DENIED auditado + `ForbiddenError`), `diff`; `Actor.auditRole` sobrescreve o `userRole` gravado (MASTER agindo como ADMIN) |
+| `audit.ts` | `appendAudit` (advisory lock por org, prevHash, HMAC-SHA256, `sanitize`), `withAudit(ctx, event, fn)` (escrita + auditoria na mesma tx), `recordAudit`, `authorize` (DENIED auditado + `ForbiddenError`), `diff`; `appendPlatformAudit(tx, actor, event)` (evento de plataforma `organizationId: null` dentro de tx de empresa: salva `app.platform`, liga, grava e RESTAURA o valor anterior); `Actor.auditRole` sobrescreve o `userRole` gravado (MASTER agindo como ADMIN) |
 | `auth.ts` | Auth.js v5 Credentials; JWT guarda só `sid` |
-| `session.ts` | `loadSession(sid)` (valida Session, ociosidade, org ACTIVE, membership; MASTER sem vínculo na empresa = `actingAsMaster`, papel ADMIN efetivo), `getCurrentSession` (React cache sobre `loadSession`), `toTenantContext(session, meta)` (preenche `auditRole: "MASTER"` quando `actingAsMaster`), `requireTenant`, `requireMaster` |
+| `session.ts` | `loadSession(sid)` (valida Session, ociosidade, org ACTIVE, membership; MASTER sem vínculo na empresa = `actingAsMaster`, papel ADMIN efetivo), `getCurrentSession` (React cache sobre `loadSession`), `toTenantContext(session, meta)` (preenche `auditRole: "MASTER"` quando `actingAsMaster`), `requireAcceptedSession` (sem sessão → /login; `pendingTerms` → /aceite; MASTER nunca fica pendente), `requireTenant` (usa o anterior), `requireMaster`; `CurrentSession.pendingTerms` |
 | `permissions.ts` | matriz RBAC ADMIN/FUNCIONARIO, `can`, `ForbiddenError` |
 | `request.ts` | `requestMeta`: ip (x-real-ip → x-forwarded-for), userAgent, requestId |
 | `env.ts` | zod das envs (lança no import) |
+| `timezones.ts` | lista/validação de fusos IANA do select de Configurações ▸ Empresa |
 | `blob.ts` | `blobToken`/`blobUploadEnabled` (formato do token Vercel Blob, fonte única) |
 | `form-state.ts` | `FormState`, `toFormState`, `plainValues` — compartilhado pelas actions |
 | `logger.ts` | JSON + `maskPii` |
@@ -86,6 +88,8 @@ prompt-beedock.md        spec original do produto
 - **platform/** (MASTER): CRUD de empresa, convite Admin 48h (token só hash SHA-256), suspender/reativar (revoga sessões), logo; `invitations.ts` (público, rate limit); `errors.ts` (`FieldError`, `NotFoundError`); `seed-master.ts`; `invite-flash.ts` (cookie httpOnly 5min); `users.ts` (`listUsers` com busca/filtro por empresa/paginação 50, `getUser`, `findUserByEmail`; tudo em `withScope({ platform: true })`). Convite aceita papel ADMIN ou FUNCIONARIO; e-mail já cadastrado exige a senha atual e vincula (`/convite/[token]`); criar empresa com e-mail existente vincula como Admin sem convite.
 - **transactions/**: `service.ts` (list paginado 50, `monthSummary`, create/update/delete soft, `keepPayerDocument`); `period.ts` (mês financeiro c/ dia inicial + timezone); `money.ts` (`parseBrl`, `valorPorExtenso`); `storage.ts` (Blob privado, magic bytes, `ownsPath`); `receipt*.ts` (PDF pdf-lib, emissão auditada).
 - **catalog/**: categorias + formas de pagamento (ADMIN, `settings.manage`), duplicata case-insensitive, sugestão de reativar.
+- **organizations/** (empresa): `service.ts` (`getCompanySettings`, `updateCompanySettings`, `setCompanyLogo`; `organization.update` auditado com `userRole` correto), `logo.ts` (`storeLogo`/`deleteLogoBlob`), `actions.ts` (`updateCompanySettingsAction`, upload/remove de logo), `schemas.ts` (`companySettingsSchema` = organizationSchema sem slug).
+- **legal/**: `service.ts` (`currentLegalDocuments`, `pendingLegalDocumentsFor`, `acceptLegalDocumentsTx`, `publishLegalDocumentTx` + variantes não-Tx, `legalOverview`), `rules.ts` (`pendingDocuments`), `schemas.ts` (recusa `[PREENCHER`), `templates.ts`, `actions.ts` (`acceptTermsAction`, `publishLegalDocumentAction`). Eventos `platform.legal_publish` e `auth.terms_accept` na cadeia da plataforma.
 - **organizations/defaults.ts**: `seedOrganizationDefaults(tx, orgId, settings)` — settings, categorias, formas de pagamento, tipos de produto.
 
 ### components/ — camadas (eslint-plugin-boundaries)
@@ -100,7 +104,7 @@ prompt-beedock.md        spec original do produto
 
 - **atoms**: `AppButton` (cva tone/size, ≥44px), aliases `AppDialog/AppDrawer/AppSheet/AppDropdownMenu`, `AppInput/Label/Skeleton/Toaster/Select` (native), `HexMark`, `MoneyText` (`formatCents`), `StatusBadge`, `OrgStatusBadge`, `NavigationProgress` (+`startNavigationProgress()`/`stopNavigationProgress()`).
 - **molecules**: `ConfirmAction` (Dialog/Drawer + motivo), `EmptyState`, `AdminOnlyNotice`, `FormField`, `KpiCard`, `MoneyInput`, `LogoDropzone` (crop WebP), `LogoutButton`, `ReceiptActions`, `InviteLink` (link de convite + copiar), `EnterOrgButton` (MASTER entra na empresa).
-- **organisms**: `TransactionForm` (~4.6k tok), `TransactionList` (+RowActions), `OrganizationForm` (+`values.ts` testado), `AppNavigation` (menu Empresa ▸ Equipe só ADMIN; `OrgSwitcher` no topo), `OrgSwitcher` (dropdown "Trocar empresa", busca local > 8 opções), `MasterBanner` ("Você está como MASTER…" + Voltar à plataforma), `TeamManager` (equipe + convites, Dialog/Drawer; reusado em `/configuracoes/equipe` e na empresa do MASTER), `UserList` e `UserMemberships` (`/plataforma/usuarios` e detalhe), `PlatformNav`, `CatalogTable`, `OrganizationList`, `LoginForm`, `AcceptInviteForm` (senha nova ou senha atual), `OrgHeader`, `OrgAccount`, `QuickActions`.
+- **organisms**: `TransactionForm` (~4.6k tok), `TransactionList` (+RowActions), `OrganizationForm` (+`values.ts` testado), `AppNavigation` (menu Empresa ▸ Equipe só ADMIN; `OrgSwitcher` no topo), `OrgSwitcher` (dropdown "Trocar empresa", busca local > 8 opções), `MasterBanner` ("Você está como MASTER…" + Voltar à plataforma), `TeamManager` (equipe + convites, Dialog/Drawer; reusado em `/configuracoes/equipe` e na empresa do MASTER), `UserList` e `UserMemberships` (`/plataforma/usuarios` e detalhe), `PlatformNav`, `CatalogTable`, `OrganizationList`, `LoginForm`, `AcceptInviteForm` (senha nova ou senha atual), `OrgHeader`, `LegalDocumentView`, `TermsAcceptForm` (aceite em `/aceite`), `LegalPublisher` (MASTER publica versão), `OrganizationForm mode="tenant"` (Empresa pelo Admin, sem slug), molecule `LegalLinks`, `LogoDropzone.removeAction`, `OrgAccount`, `QuickActions`.
 - **templates**: `AppShellTemplate` (header topo `bg-ink` + faixa `.tape`, max-w 1240), `AuthTemplate` (50/50).
 - Organisms recebem server actions como props; nunca importam `features/`.
 
@@ -160,6 +164,9 @@ sequenceDiagram
     A-->>F: toFormState / {ok} + revalidatePath
 ```
 
+### Aceite de termos
+Publicar versão (MASTER, `/plataforma/termos`) cria `LegalDocument` + `platform.legal_publish`. Todo guard `requireAcceptedSession` calcula `pendingTerms` (versão vigente sem `LegalAcceptance` do usuário; MASTER isento) e redireciona a `/aceite`; `acceptTermsAction` grava `LegalAcceptance` + `auth.terms_accept` (via `appendPlatformAudit`) e vai a `/inicio`. Convite exige a caixa de aceite quando há documento publicado (erro `terms`); a conta e o aceite saem na mesma tx. `/aceite` e `logoutAction` não passam pelo guard de termos.
+
 ## Conventions
 
 - Proteção de rota só em layouts/pages/actions/route handlers (`requireTenant`/`requireMaster`) — **não há middleware/proxy**. Toda página, action e route handler nova chama o guard.
@@ -184,6 +191,10 @@ sequenceDiagram
 - `AppNavigation` linka Pedidos/Clientes/Relatórios (placeholders).
 - Dark mode só via `prefers-color-scheme`.
 - Node ≥22.12 obrigatório (Neon WebSocket falha em 20). Porta dev 3004.
+
+- Evento de plataforma (`organizationId: null`) dentro de tx de empresa só via `appendPlatformAudit` (restaura `app.platform` ao fim; não deixar o escopo ligado).
+- **Testes nunca publicam `LegalDocument` fora de rollback** (`withScope({platform:true}, …throw ROLLBACK)`): uma versão publicada bloqueia todos os usuários do dev em `/aceite`.
+- Páginas públicas que leem o banco (`/termos`, `/privacidade`) são dinâmicas (`await connection()`), senão o build pré-renderiza com acesso ao banco.
 
 ## Navigation Guide
 

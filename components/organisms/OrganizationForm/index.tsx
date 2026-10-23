@@ -5,7 +5,9 @@ import { toast } from "sonner";
 import { AppButton } from "@/components/atoms/AppButton";
 import { AppLabel } from "@/components/atoms/AppLabel";
 import { FormField } from "@/components/molecules/FormField";
+import { AppSelect } from "@/components/atoms/AppSelect";
 import { slugify } from "@/lib/document";
+import { timezoneOptions } from "@/lib/timezones";
 import { toFormValues } from "./values";
 
 type FormState = {
@@ -16,7 +18,8 @@ type FormState = {
 };
 
 type Props = {
-  mode: "create" | "edit";
+  /** tenant: o Admin edita a própria empresa (sem slug nem seção do Admin). */
+  mode: "create" | "edit" | "tenant";
   action: (prev: FormState, fd: FormData) => Promise<FormState>;
   /** Valores iniciais nas chaves do FormData (ver toFormValues). */
   defaults?: Record<string, unknown>;
@@ -26,17 +29,7 @@ type Props = {
   lookupEmail?: (email: string) => Promise<{ name: string } | null>;
 };
 
-const TIMEZONES = [
-  "America/Fortaleza",
-  "America/Sao_Paulo",
-  "America/Manaus",
-  "America/Cuiaba",
-  "America/Belem",
-  "America/Recife",
-  "America/Bahia",
-  "America/Rio_Branco",
-  "America/Noronha",
-];
+const MONTH_NOTE = "Muda como os meses são calculados em Início, Lançamentos e Relatórios, inclusive meses passados.";
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
   return (
@@ -65,10 +58,10 @@ export function OrganizationForm({ mode, action, defaults, logo, lookupEmail }: 
   const [color, setColor] = useState(val("primaryColor") || "#f5a400");
 
   useEffect(() => {
-    if (state.ok) toast.success("Empresa atualizada.");
+    if (state.ok) toast.success(mode === "tenant" ? "Dados salvos." : "Empresa atualizada.");
     if (state.error) toast.error(state.error);
     if (state.fieldErrors) formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
-  }, [state]);
+  }, [state, mode]);
 
   // ViaCEP: falha silenciosa, o usuário preenche à mão.
   async function lookupCep(form: HTMLFormElement | null, raw: string) {
@@ -126,20 +119,22 @@ export function OrganizationForm({ mode, action, defaults, logo, lookupEmail }: 
           autoComplete="off"
           required
         />
-        <FormField
-          label="Endereço (slug) *"
-          name="slug"
-          value={slug}
-          onChange={(e) => {
-            setSlugTouched(true);
-            setSlug(e.target.value);
-          }}
-          error={err("slug")}
-          hint="Minúsculas, números e hífens."
-          autoCapitalize="none"
-          autoComplete="off"
-          required
-        />
+        {mode !== "tenant" && (
+          <FormField
+            label="Endereço (slug) *"
+            name="slug"
+            value={slug}
+            onChange={(e) => {
+              setSlugTouched(true);
+              setSlug(e.target.value);
+            }}
+            error={err("slug")}
+            hint="Minúsculas, números e hífens."
+            autoCapitalize="none"
+            autoComplete="off"
+            required
+          />
+        )}
         {f("legalName", "Razão social")}
         {f("document", "CPF ou CNPJ", { inputMode: "numeric" })}
       </Section>
@@ -188,23 +183,42 @@ export function OrganizationForm({ mode, action, defaults, logo, lookupEmail }: 
       </Section>
 
       <Section title="Preferências">
-        {f("settings.monthStartDay", "Dia de início do mês", {
-          type: "number",
-          inputMode: "numeric",
-          min: 1,
-          max: 28,
-          defaultValue: val("settings.monthStartDay") || "1",
-        })}
-        <div>
-          {f("settings.timezone", "Fuso horário", {
-            list: "tz-list",
-            defaultValue: val("settings.timezone") || "America/Fortaleza",
+        <div className="grid content-start gap-1.5">
+          {f("settings.monthStartDay", "Dia de início do mês", {
+            type: "number",
+            inputMode: "numeric",
+            min: 1,
+            max: 28,
+            defaultValue: val("settings.monthStartDay") || "1",
+            hint: MONTH_NOTE,
           })}
-          <datalist id="tz-list">
-            {TIMEZONES.map((t) => (
-              <option key={t} value={t} />
+        </div>
+        <div className="grid content-start gap-1.5">
+          <AppLabel htmlFor="settings.timezone">Fuso horário</AppLabel>
+          <AppSelect
+            key={val("settings.timezone")}
+            id="settings.timezone"
+            name="settings.timezone"
+            defaultValue={val("settings.timezone") || "America/Fortaleza"}
+            aria-invalid={err("settings.timezone") ? true : undefined}
+            aria-describedby={
+              err("settings.timezone") ? "settings.timezone-error settings.timezone-hint" : "settings.timezone-hint"
+            }
+          >
+            {timezoneOptions(val("settings.timezone") || undefined).map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
             ))}
-          </datalist>
+          </AppSelect>
+          {err("settings.timezone") && (
+            <p id="settings.timezone-error" role="alert" className="text-destructive text-sm">
+              {err("settings.timezone")}
+            </p>
+          )}
+          <p id="settings.timezone-hint" className="text-muted-foreground text-sm">
+            {MONTH_NOTE}
+          </p>
         </div>
         {f("settings.sessionIdleMinutes", "Ociosidade da sessão (min)", {
           type: "number",

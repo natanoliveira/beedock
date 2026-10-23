@@ -8,6 +8,7 @@ import { env } from "@/lib/env";
 import { ForbiddenError } from "@/lib/permissions";
 import { EMAIL_TAKEN, FieldError, SLUG_TAKEN } from "./errors";
 import type { MemberInviteInput } from "@/features/members/schemas";
+import type { CompanySettingsInput } from "@/features/organizations/schemas";
 import type { AdminInviteInput, OrganizationInput } from "./schemas";
 
 export type PlatformActor = Actor & { userId: string; userName: string; isMaster: boolean };
@@ -45,10 +46,10 @@ async function mapUnique<T>(field: "slug" | "email", fn: () => Promise<T>): Prom
   }
 }
 
-function orgData(o: OrganizationInput) {
+/** Campos editáveis da empresa, sem o slug (só o MASTER troca o slug). */
+export function orgData(o: CompanySettingsInput) {
   return {
     name: o.name,
-    slug: o.slug,
     legalName: o.legalName ?? null,
     document: o.document ?? null,
     phone: o.phone ?? null,
@@ -65,7 +66,7 @@ function orgData(o: OrganizationInput) {
   };
 }
 
-function settingsData(s: OrganizationInput["settings"]) {
+export function settingsData(s: CompanySettingsInput["settings"]) {
   return {
     monthStartDay: s.monthStartDay,
     timezone: s.timezone,
@@ -78,7 +79,12 @@ function settingsData(s: OrganizationInput["settings"]) {
 }
 
 /** Revoga convites abertos do mesmo e-mail na empresa, cria o novo e devolve o link. O token só existe aqui e no link. */
-export async function issueInvite(tx: Tx, actor: Actor, organizationId: string, invite: MemberInviteInput): Promise<string> {
+export async function issueInvite(
+  tx: Tx,
+  actor: Actor,
+  organizationId: string,
+  invite: MemberInviteInput,
+): Promise<string> {
   const token = randomBytes(32).toString("base64url");
   const tokenHash = hashToken(token);
   await tx.invitation.updateMany({
@@ -96,12 +102,16 @@ export async function issueInvite(tx: Tx, actor: Actor, organizationId: string, 
       createdById: actor.userId,
     },
   });
-  await appendAudit(tx, { ...actor, organizationId }, {
-    action: "invitation.create",
-    entityType: "Invitation",
-    entityId: created.id,
-    after: { name: invite.name, email: invite.email, role: invite.role },
-  });
+  await appendAudit(
+    tx,
+    { ...actor, organizationId },
+    {
+      action: "invitation.create",
+      entityType: "Invitation",
+      entityId: created.id,
+      after: { name: invite.name, email: invite.email, role: invite.role },
+    },
+  );
   return `${env.AUTH_URL}/convite/${token}`;
 }
 
@@ -120,7 +130,7 @@ export async function createOrganization(
   const orgActor = { ...actor, organizationId };
   const inviteUrl = await mapUnique("slug", () =>
     withScope({ organizationId }, async (tx) => {
-      await tx.organization.create({ data: { id: organizationId, ...orgData(org) } });
+      await tx.organization.create({ data: { id: organizationId, slug: org.slug, ...orgData(org) } });
       await seedOrganizationDefaults(tx, organizationId, settingsData(org.settings));
       await appendAudit(tx, orgActor, {
         action: "platform.organization_create",
@@ -145,31 +155,51 @@ export async function createOrganization(
   return { organizationId, inviteUrl };
 }
 
+/** Grava empresa + settings e devolve o diff para a auditoria (e se o tempo de inatividade mudou). */
+export async function writeOrganization(
+  tx: Tx,
+  id: string,
+  data: ReturnType<typeof orgData> & { slug?: string },
+  sData: ReturnType<typeof settingsData>,
+  userId: string,
+) {
+  const [current, currentSettings] = await Promise.all([
+    tx.organization.findUniqueOrThrow({ where: { id } }),
+    tx.organizationSettings.findUniqueOrThrow({ where: { organizationId: id } }),
+  ]);
+  await tx.organization.update({ where: { id }, data });
+  await tx.organizationSettings.update({ where: { organizationId: id }, data: { ...sData, updatedById: userId } });
+  const pickKeys = <T extends object>(src: T, keys: object) =>
+    Object.fromEntries(Object.keys(keys).map((k) => [k, src[k as keyof T]]));
+  const changes = diff(
+    { ...pickKeys(current, data), settings: pickKeys(currentSettings, sData) },
+    { ...data, settings: sData },
+  );
+  return { ...changes, idleChanged: sData.sessionIdleMinutes !== currentSettings.sessionIdleMinutes };
+}
+
 export async function updateOrganization(actor: PlatformActor, id: string, org: OrganizationInput): Promise<void> {
   await assertMaster(actor, "platform.organization_update");
   await mapUnique("slug", () =>
     withScope({ organizationId: id }, async (tx) => {
-      const [current, currentSettings] = await Promise.all([
-        tx.organization.findUniqueOrThrow({ where: { id } }),
-        tx.organizationSettings.findUniqueOrThrow({ where: { organizationId: id } }),
-      ]);
-      const data = orgData(org);
-      const sData = settingsData(org.settings);
-      await tx.organization.update({ where: { id }, data });
-      await tx.organizationSettings.update({ where: { organizationId: id }, data: { ...sData, updatedById: actor.userId } });
-      const pickKeys = <T extends object>(src: T, keys: object) =>
-        Object.fromEntries(Object.keys(keys).map((k) => [k, src[k as keyof T]]));
-      const { before, after } = diff(
-        { ...pickKeys(current, data), settings: pickKeys(currentSettings, sData) },
-        { ...data, settings: sData },
+      const { before, after } = await writeOrganization(
+        tx,
+        id,
+        { slug: org.slug, ...orgData(org) },
+        settingsData(org.settings),
+        actor.userId,
       );
-      await appendAudit(tx, { ...actor, organizationId: id }, {
-        action: "platform.organization_update",
-        entityType: "Organization",
-        entityId: id,
-        before,
-        after,
-      });
+      await appendAudit(
+        tx,
+        { ...actor, organizationId: id },
+        {
+          action: "platform.organization_update",
+          entityType: "Organization",
+          entityId: id,
+          before,
+          after,
+        },
+      );
     }),
   );
 }
@@ -178,20 +208,28 @@ export async function listOrganizations(actor: PlatformActor): Promise<Organizat
   await assertMaster(actor, "platform.organization_list");
   const [orgs, seen, [counts, invites, admins]] = await Promise.all([
     db.organization.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, slug: true, status: true } }),
-    db.session.groupBy({ by: ["organizationId"], where: { organizationId: { not: null } }, _max: { lastSeenAt: true } }),
-    withScope({ platform: true }, async (tx) => [
-      await tx.membership.groupBy({ by: ["organizationId"], where: { active: true }, _count: { _all: true } }),
-      await tx.invitation.findMany({
-        where: { role: "ADMIN", acceptedAt: null, revokedAt: null, expiresAt: { gt: new Date() } },
-        orderBy: { createdAt: "desc" },
-        select: { organizationId: true, expiresAt: true, name: true, email: true, phone: true },
-      }),
-      await tx.membership.findMany({
-        where: { role: "ADMIN", active: true },
-        orderBy: { createdAt: "asc" },
-        select: { organizationId: true, user: { select: { name: true, email: true } } },
-      }),
-    ] as const),
+    db.session.groupBy({
+      by: ["organizationId"],
+      where: { organizationId: { not: null } },
+      _max: { lastSeenAt: true },
+    }),
+    withScope(
+      { platform: true },
+      async (tx) =>
+        [
+          await tx.membership.groupBy({ by: ["organizationId"], where: { active: true }, _count: { _all: true } }),
+          await tx.invitation.findMany({
+            where: { role: "ADMIN", acceptedAt: null, revokedAt: null, expiresAt: { gt: new Date() } },
+            orderBy: { createdAt: "desc" },
+            select: { organizationId: true, expiresAt: true, name: true, email: true, phone: true },
+          }),
+          await tx.membership.findMany({
+            where: { role: "ADMIN", active: true },
+            orderBy: { createdAt: "asc" },
+            select: { organizationId: true, user: { select: { name: true, email: true } } },
+          }),
+        ] as const,
+    ),
   ]);
   const activeUsers = new Map(counts.map((c) => [c.organizationId, c._count._all]));
   const lastSeen = new Map(seen.map((s) => [s.organizationId, s._max.lastSeenAt]));
@@ -212,43 +250,46 @@ export async function listOrganizations(actor: PlatformActor): Promise<Organizat
   });
 }
 
+/** Empresa + settings no formato do formulário (ou null). Quem chama já autorizou. */
+export async function readOrganization(tx: Tx, id: string) {
+  const o = await tx.organization.findUnique({ where: { id } });
+  const s = await tx.organizationSettings.findUnique({ where: { organizationId: id } });
+  if (!o || !s) return null;
+  const u = <T>(v: T | null) => v ?? undefined;
+  return {
+    id: o.id,
+    status: o.status,
+    logoUrl: o.logoUrl,
+    name: o.name,
+    slug: o.slug,
+    primaryColor: o.primaryColor,
+    legalName: u(o.legalName),
+    document: u(o.document),
+    phone: u(o.phone),
+    email: u(o.email),
+    zipCode: u(o.zipCode),
+    street: u(o.street),
+    number: u(o.number),
+    complement: u(o.complement),
+    district: u(o.district),
+    city: u(o.city),
+    state: u(o.state),
+    pixKey: u(o.pixKey),
+    settings: {
+      monthStartDay: s.monthStartDay,
+      timezone: s.timezone,
+      sessionIdleMinutes: s.sessionIdleMinutes,
+      customerRetentionMonths: s.customerRetentionMonths,
+      dpoName: u(s.dpoName),
+      dpoEmail: u(s.dpoEmail),
+      dpoPhone: u(s.dpoPhone),
+    },
+  };
+}
+
 export async function getOrganization(actor: PlatformActor, id: string) {
   await assertMaster(actor, "platform.organization_view");
-  return withScope({ organizationId: id }, async (tx) => {
-    const o = await tx.organization.findUnique({ where: { id } });
-    const s = await tx.organizationSettings.findUnique({ where: { organizationId: id } });
-    if (!o || !s) return null;
-    const u = <T>(v: T | null) => v ?? undefined;
-    return {
-      id: o.id,
-      status: o.status,
-      logoUrl: o.logoUrl,
-      name: o.name,
-      slug: o.slug,
-      primaryColor: o.primaryColor,
-      legalName: u(o.legalName),
-      document: u(o.document),
-      phone: u(o.phone),
-      email: u(o.email),
-      zipCode: u(o.zipCode),
-      street: u(o.street),
-      number: u(o.number),
-      complement: u(o.complement),
-      district: u(o.district),
-      city: u(o.city),
-      state: u(o.state),
-      pixKey: u(o.pixKey),
-      settings: {
-        monthStartDay: s.monthStartDay,
-        timezone: s.timezone,
-        sessionIdleMinutes: s.sessionIdleMinutes,
-        customerRetentionMonths: s.customerRetentionMonths,
-        dpoName: u(s.dpoName),
-        dpoEmail: u(s.dpoEmail),
-        dpoPhone: u(s.dpoPhone),
-      },
-    };
-  });
+  return withScope({ organizationId: id }, (tx) => readOrganization(tx, id));
 }
 
 export async function setOrganizationStatus(
@@ -266,12 +307,16 @@ export async function setOrganizationStatus(
     if (suspend) {
       await tx.session.updateMany({ where: { organizationId: id, revokedAt: null }, data: { revokedAt: new Date() } });
     }
-    await appendAudit(tx, { ...actor, organizationId: id }, {
-      action,
-      entityType: "Organization",
-      entityId: id,
-      before: { status: current.status },
-      after: { status, ...(reason ? { reason } : {}) },
-    });
+    await appendAudit(
+      tx,
+      { ...actor, organizationId: id },
+      {
+        action,
+        entityType: "Organization",
+        entityId: id,
+        before: { status: current.status },
+        after: { status, ...(reason ? { reason } : {}) },
+      },
+    );
   });
 }

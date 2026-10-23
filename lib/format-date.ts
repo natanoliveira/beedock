@@ -2,3 +2,7 @@ const fmt = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "s
 
 /** Fuso fixo para o servidor e o cliente renderizarem o mesmo texto. */
 export const formatDateTime = (d: Date | string) => fmt.format(new Date(d));
+
+const dateFmt = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeZone: "America/Fortaleza" });
+
+export const formatDate = (d: Date | string) => dateFmt.format(new Date(d));

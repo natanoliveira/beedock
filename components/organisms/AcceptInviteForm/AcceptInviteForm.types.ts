@@ -3,5 +3,6 @@ export type AcceptInviteFormState = { error?: string; fieldErrors?: Record<strin
 export type AcceptInviteFormProps = {
   token: string;
   existingUser?: boolean;
+  requireTerms?: boolean;
   action: (state: AcceptInviteFormState, formData: FormData) => Promise<AcceptInviteFormState>;
 };

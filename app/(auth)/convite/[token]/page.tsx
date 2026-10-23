@@ -23,13 +23,20 @@ export default async function ConvitePage({ params }: { params: Promise<{ token:
   }
 
   return (
-    <AuthTemplate title={`Bem-vindo, ${invite.name}`} subtitle={
+    <AuthTemplate
+      title={`Bem-vindo, ${invite.name}`}
+      subtitle={
         invite.existingUser
           ? `${invite.organizationName} · ${invite.email}. Você já tem conta: confirme sua senha para entrar nesta empresa.`
           : `${invite.organizationName} · ${invite.email}. Defina sua senha para entrar.`
       }
     >
-      <AcceptInviteForm token={token} action={acceptInvitationAction} existingUser={invite.existingUser} />
+      <AcceptInviteForm
+        token={token}
+        action={acceptInvitationAction}
+        existingUser={invite.existingUser}
+        requireTerms={invite.requireTerms}
+      />
     </AuthTemplate>
   );
 }

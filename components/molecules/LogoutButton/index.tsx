@@ -17,7 +17,7 @@ import type { LogoutButtonProps } from "./LogoutButton.types";
 
 const WAIT_MS = 2000;
 
-export function LogoutButton({ logoutAction }: LogoutButtonProps) {
+export function LogoutButton({ logoutAction, label }: LogoutButtonProps) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
 
@@ -36,9 +36,16 @@ export function LogoutButton({ logoutAction }: LogoutButtonProps) {
   return (
     <AppDialog open={open} onOpenChange={(next) => !pending && setOpen(next)}>
       <AppDialogTrigger asChild>
-        <AppButton type="button" tone="ghost" size="icon" aria-label="Sair" className="hover:bg-white/10">
-          <LogOut aria-hidden />
-        </AppButton>
+        {label ? (
+          <AppButton type="button" tone="outline" size="lg">
+            <LogOut aria-hidden />
+            {label}
+          </AppButton>
+        ) : (
+          <AppButton type="button" tone="ghost" size="icon" aria-label="Sair" className="hover:bg-white/10">
+            <LogOut aria-hidden />
+          </AppButton>
+        )}
       </AppDialogTrigger>
       <AppDialogContent
         showCloseButton={!pending}

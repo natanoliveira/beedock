@@ -19,7 +19,7 @@ import { z } from "zod";
 import { type FormState, plainValues, toFormState } from "@/lib/form-state";
 import { ForbiddenError } from "@/lib/permissions";
 import { requestMeta } from "@/lib/request";
-import { getCurrentSession, requireTenant } from "@/lib/session";
+import { requireAcceptedSession, requireTenant } from "@/lib/session";
 import { platformActor } from "@/features/platform/actor";
 import { findUserByEmail } from "@/features/platform/users";
 import {
@@ -126,8 +126,7 @@ export async function revokeInvitationAction(organizationId: string | null, invi
 }
 
 async function sessionActor(): Promise<SessionActor> {
-  const session = await getCurrentSession();
-  if (!session) redirect("/login");
+  const session = await requireAcceptedSession();
   return {
     sessionId: session.sessionId,
     userId: session.user.id,

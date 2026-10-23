@@ -1,4 +1,5 @@
 import { HexMark } from "@/components/atoms/HexMark";
+import { LegalLinks } from "@/components/molecules/LegalLinks";
 import { cn } from "@/lib/utils";
 import type { AuthTemplateProps } from "./AuthTemplate.types";
 
@@ -94,6 +95,7 @@ export function AuthTemplate({ title, subtitle, eyebrow, footer, children }: Aut
           </div>
           {children}
           {footer && <p className="text-muted-foreground text-center text-[13px]">{footer}</p>}
+          <LegalLinks className="-mt-3" />
         </div>
       </main>
     </div>

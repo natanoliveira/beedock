@@ -8,6 +8,7 @@ import { requireTenant } from "@/lib/session";
 export const metadata: Metadata = { title: "Configurações" };
 
 const LINKS = [
+  { href: "/configuracoes/empresa", title: "Empresa", text: "Dados, logo, cor e preferências." },
   { href: "/configuracoes/equipe", title: "Equipe", text: "Convide pessoas e defina papéis." },
   { href: "/configuracoes/categorias", title: "Categorias", text: "Organize entradas e saídas." },
   { href: "/configuracoes/formas-de-pagamento", title: "Formas de pagamento", text: "Pix, dinheiro, cartão e outras." },

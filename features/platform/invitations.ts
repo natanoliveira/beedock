@@ -1,6 +1,8 @@
 import { hashPassword, ipBlocked as loginIpBlocked, verifyPassword } from "@/features/auth/service";
 import { type Actor, appendAudit, recordAudit, type RequestMeta } from "@/lib/audit";
 import { db, withScope } from "@/lib/db";
+import { acceptLegalDocumentsTx, currentLegalDocuments } from "@/features/legal/service";
+import { FieldError } from "./errors";
 import { hashToken, isUnique } from "./service";
 
 export const INVITE_IP_WINDOW_MINUTES = 15;
@@ -39,13 +41,18 @@ const usable = (i: NonNullable<Awaited<ReturnType<typeof lookup>>>) =>
   !i.acceptedAt && !i.revokedAt && i.expiresAt > new Date() && i.organization.status === "ACTIVE";
 
 // e-mails são gravados em minúsculas; busca case-insensitive por segurança
-const findAccount = (email: string) =>
-  db.user.findFirst({ where: { email: { equals: email, mode: "insensitive" } } });
+const findAccount = (email: string) => db.user.findFirst({ where: { email: { equals: email, mode: "insensitive" } } });
 
 export async function findInvitation(
   token: string,
   meta: RequestMeta,
-): Promise<{ organizationName: string; name: string; email: string; existingUser: boolean } | null> {
+): Promise<{
+  organizationName: string;
+  name: string;
+  email: string;
+  existingUser: boolean;
+  requireTerms: boolean;
+} | null> {
   if (await ipBlocked(meta.ip)) return null;
   const inv = await lookup(token);
   if (!inv || !usable(inv)) {
@@ -58,17 +65,19 @@ export async function findInvitation(
     name: inv.name,
     email: inv.email,
     existingUser: !!account?.passwordHash && !account.anonymizedAt,
+    requireTerms: (await currentLegalDocuments(db)).length > 0,
   };
 }
 
 class Rejected extends Error {}
+class TermsRequired extends Error {}
 
 export type AcceptResult =
   | { ok: true; email: string; existingUser: boolean }
-  | { ok: false; reason: "invalid" | "password" | "locked" };
+  | { ok: false; reason: "invalid" | "password" | "locked" | "terms" };
 
 export async function acceptInvitation(
-  input: { token: string; password: string },
+  input: { token: string; password: string; acceptTerms: boolean },
   meta: RequestMeta,
 ): Promise<AcceptResult> {
   if (await ipBlocked(meta.ip)) return { ok: false, reason: "invalid" };
@@ -79,7 +88,8 @@ export async function acceptInvitation(
   }
   const organizationId = inv.organizationId;
   const account = await findAccount(inv.email);
-  const existing = account?.passwordHash && !account.anonymizedAt ? { ...account, passwordHash: account.passwordHash } : null;
+  const existing =
+    account?.passwordHash && !account.anonymizedAt ? { ...account, passwordHash: account.passwordHash } : null;
 
   let passwordHash: string | undefined;
   if (existing) {
@@ -121,27 +131,40 @@ export async function acceptInvitation(
       const link = await tx.membership.findUnique({
         where: { userId_organizationId: { userId: user.id, organizationId } },
       });
-      if (link?.active) return;
-      if (link) {
-        await tx.membership.update({ where: { id: link.id }, data: { active: true, role: inv.role } });
+      const linkMembership = async () => {
+        if (link) {
+          await tx.membership.update({ where: { id: link.id }, data: { active: true, role: inv.role } });
+          await appendAudit(tx, actor, {
+            action: "member.reactivate",
+            entityType: "Membership",
+            entityId: link.id,
+            before: { active: false, role: link.role },
+            after: { active: true, role: inv.role },
+          });
+          return;
+        }
+        const created = await tx.membership.create({ data: { userId: user.id, organizationId, role: inv.role } });
         await appendAudit(tx, actor, {
-          action: "member.reactivate",
+          action: "member.create",
           entityType: "Membership",
-          entityId: link.id,
-          before: { active: false, role: link.role },
-          after: { active: true, role: inv.role },
+          entityId: created.id,
+          after: { name: user.name, email: user.email, role: inv.role },
         });
-        return;
-      }
-      const created = await tx.membership.create({ data: { userId: user.id, organizationId, role: inv.role } });
-      await appendAudit(tx, actor, {
-        action: "member.create",
-        entityType: "Membership",
-        entityId: created.id,
-        after: { name: user.name, email: user.email, role: inv.role },
-      });
+      };
+      if (!link?.active) await linkMembership();
+      // aceite por último: appendPlatformAudit pega o lock da plataforma depois do lock da empresa
+      const docs = await currentLegalDocuments(tx);
+      if (docs.length === 0) return;
+      if (!input.acceptTerms) throw new TermsRequired();
+      await acceptLegalDocumentsTx(
+        tx,
+        { ...actor, userId: user.id },
+        docs.map((d) => d.id),
+      );
     });
   } catch (e) {
+    // FieldError: nova versão dos termos publicada no meio da tx
+    if (e instanceof TermsRequired || e instanceof FieldError) return { ok: false, reason: "terms" };
     if (e instanceof Rejected || isUnique(e)) {
       await invalid(meta);
       return { ok: false, reason: "invalid" };
