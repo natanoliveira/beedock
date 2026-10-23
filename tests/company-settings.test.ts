@@ -250,6 +250,19 @@ describe.skipIf(!APP_URL || !OWNER_URL)("service de configurações da empresa",
   );
 
   it(
+    "setCompanyLogo concorrente: cada gravação devolve o logo que de fato substituiu",
+    async () => {
+      const u = (n: number) => `https://x.public.blob.vercel-storage.com/org/${orgA}/logo-c${n}.webp`;
+      const res = await Promise.all([svc.setCompanyLogo(adminA, u(1)), svc.setCompanyLogo(adminA, u(2))]);
+      const final = (await owner.organization.findUniqueOrThrow({ where: { id: orgA } })).logoUrl;
+      // serializado: um substituiu null, o outro substituiu o do primeiro (nenhum blob órfão)
+      expect(res.map((r) => r.previous)).toEqual(expect.arrayContaining([null, final === u(1) ? u(2) : u(1)]));
+      expect((await svc.setCompanyLogo(adminA, null)).previous).toBe(final);
+    },
+    T,
+  );
+
+  it(
     "Funcionário não altera o logo",
     async () => {
       await expect(svc.setCompanyLogo(funcA, "https://x/logo-2.webp")).rejects.toBeInstanceOf(ForbiddenError);

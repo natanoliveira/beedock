@@ -34,6 +34,8 @@ export async function setCompanyLogo(ctx: TenantContext, url: string | null): Pr
   await authorize(ctx, "settings.manage");
   const id = ctx.organizationId;
   return withScope({ organizationId: id }, async (tx) => {
+    // trava a linha: 2 uploads simultâneos leriam o mesmo previous e o blob do primeiro ficaria órfão
+    await tx.$executeRaw`SELECT 1 FROM "Organization" WHERE "id" = ${id} FOR UPDATE`;
     const { logoUrl } = await tx.organization.findUniqueOrThrow({ where: { id }, select: { logoUrl: true } });
     if (logoUrl === url) return { previous: null };
     await tx.organization.update({ where: { id }, data: { logoUrl: url } });

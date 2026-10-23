@@ -58,11 +58,11 @@ export async function loadSession(sid: string): Promise<CurrentSession | null> {
     return null;
   }
 
-  if (now - row.lastSeenAt.getTime() > TOUCH_AFTER_MS) {
-    await db.session.update({ where: { id: sid }, data: { lastSeenAt: new Date() } });
-  }
-
-  const pendingTerms = !isMaster && (await hasPendingLegalDocuments(row.userId));
+  const [pendingTerms] = await Promise.all([
+    !isMaster && hasPendingLegalDocuments(row.userId),
+    now - row.lastSeenAt.getTime() > TOUCH_AFTER_MS &&
+      db.session.update({ where: { id: sid }, data: { lastSeenAt: new Date() } }),
+  ]);
 
   return {
     sessionId: row.id,
@@ -84,7 +84,10 @@ export const getCurrentSession = cache(async (): Promise<CurrentSession | null> 
   return sid ? loadSession(sid) : null;
 });
 
-export function toTenantContext(session: CurrentSession, meta: RequestMeta): TenantContext & { session: CurrentSession } {
+export function toTenantContext(
+  session: CurrentSession,
+  meta: RequestMeta,
+): TenantContext & { session: CurrentSession } {
   if (!session.organization || !session.role) throw new Error("Sessão sem empresa.");
   return {
     session,

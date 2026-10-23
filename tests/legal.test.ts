@@ -136,6 +136,19 @@ describe.skipIf(!APP_URL || !OWNER_URL)("termos: versões, aceite e cadeia da pl
   );
 
   it(
+    "papel do app não altera nem apaga termos e aceites (prova legal)",
+    async () => {
+      for (const run of [
+        (tx: import("@/lib/db").Tx) => tx.legalDocument.updateMany({ where: { id: "nenhum" }, data: { content: "x" } }),
+        (tx: import("@/lib/db").Tx) => tx.legalAcceptance.deleteMany({ where: { userId: "nenhum" } }),
+      ]) {
+        await expect(scope({ platform: true }, run)).rejects.toThrow(/permission denied/i);
+      }
+    },
+    T,
+  );
+
+  it(
     "hasPendingLegalDocuments concorda com pendingLegalDocumentsFor (sem loop em /aceite)",
     async () => {
       await inTx(async (tx) => {
