@@ -135,6 +135,7 @@ pnpm dev              # http://localhost:3004
 | `AUTH_URL` | URL pública da aplicação | `http://localhost:3004` ou o domínio na Vercel |
 | `AUDIT_HMAC_KEY` | Chave HMAC da cadeia de auditoria. Fica só na aplicação, nunca no banco | `openssl rand -base64 32` |
 | `BLOB_READ_WRITE_TOKEN` | Necessário para enviar comprovantes e logos: use um token real de um Blob store (um valor falso faz o upload falhar). Sem ele o upload fica indisponível, o resto do app funciona | Vercel › Storage › Blob |
+| `SEED_DEMOS` | `false` pula as 3 empresas fictícias no `db:seed` (produção) | Você define |
 | `SEED_MASTER_NAME` / `SEED_MASTER_EMAIL` / `SEED_MASTER_PASSWORD` | Opcionais, juntos: o `db:seed` cria ou promove o MASTER | Você define |
 | `ENABLE_SIGNUP` | Cadastro público (desligado) | `false` |
 | `TEST_DATABASE_URL` / `TEST_DIRECT_URL` | Banco dos testes de isolamento (opcional) | Branch de teste do Neon |

@@ -3,7 +3,7 @@ import { readMasterSeed, seedMaster } from "@/features/platform/seed-master";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { ownerClient, scriptActor } from "../scripts/cli";
 
-// Empresas fictícias, sem usuários; cria/promove o MASTER se SEED_MASTER_* estiver definido. Admins via pnpm create-org.
+// Empresas fictícias, sem usuários (SEED_DEMOS=false pula, p/ produção); cria/promove o MASTER se SEED_MASTER_* estiver definido. Admins via pnpm create-org.
 const ORGS = [
   { slug: "prime-studio-demo", name: "Prime Studio - Uniformes (demo)", city: "Teresina", state: "PI" },
   { slug: "estampa-arte-demo", name: "Estampa Arte (demo)", city: "Fortaleza", state: "CE" },
@@ -55,7 +55,9 @@ async function main() {
   const master = readMasterSeed(process.env);
   if (!master) console.log("- MASTER: SEED_MASTER_* ausentes, pulando");
   else console.log(`- MASTER: ${await db.$transaction((tx) => seedMaster(tx, master, scriptActor("seed")))}`);
-  for (const org of ORGS) {
+  const demos = process.env.SEED_DEMOS === "false" ? [] : ORGS;
+  if (!demos.length) console.log("- demos: SEED_DEMOS=false, pulando");
+  for (const org of demos) {
     const existing = await db.organization.findUnique({ where: { slug: org.slug }, select: { id: true } });
     if (existing) {
       // empresa sem configurações quebra as telas financeiras; recria com os padrões

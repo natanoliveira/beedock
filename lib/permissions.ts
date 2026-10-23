@@ -25,6 +25,7 @@ export const PERMISSIONS = {
   "customer.anonymize": ADMIN,
   "member.manage": ADMIN,
   "settings.manage": ADMIN,
+  "company.export": ADMIN,
   "audit.view": ADMIN,
 } as const satisfies Record<string, readonly MemberRole[]>;
 
