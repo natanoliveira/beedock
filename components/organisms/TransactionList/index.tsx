@@ -19,6 +19,7 @@ import { KpiCard } from "@/components/molecules/KpiCard";
 import { ReceiptActions } from "@/components/molecules/ReceiptActions";
 import { TransactionForm, type FormTarget } from "@/components/organisms/TransactionForm";
 import { cn } from "@/lib/utils";
+import { OrderTag } from "./OrderTag";
 import { RowActions } from "./RowActions";
 import type { ListRow, TransactionListProps } from "./TransactionList.types";
 import { TransactionListSkeleton } from "./TransactionListSkeleton";
@@ -253,6 +254,7 @@ export function TransactionList({
                         </td>
                         <td className="px-4 py-2.5">
                           <span className="font-medium">{r.description}</span>
+                          {r.order && <span className="ml-2"><OrderTag order={r.order} /></span>}
                           {r.payerName && <span className="text-muted-foreground block text-xs">de {r.payerName}</span>}
                         </td>
                         <td className="px-4 py-2.5">
@@ -283,6 +285,7 @@ export function TransactionList({
                       <span className="bg-muted rounded-full px-2 py-0.5 font-bold">{catLabel(r)}</span>
                       {r.paymentMethod && <span>{r.paymentMethod.name}</span>}
                     </p>
+                    {r.order && <p><OrderTag order={r.order} /></p>}
                     {r.payerName && <p className="text-muted-foreground text-xs">de {r.payerName}</p>}
                     <div className="-mb-1 border-t pt-1">{actions(r)}</div>
                   </li>

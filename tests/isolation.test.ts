@@ -93,6 +93,7 @@ describe.skipIf(!APP_URL || !OWNER_URL)("isolamento entre empresas", () => {
         const productType = await tx.productType.create({ data: { name: `Camisa ${suffix}` } });
         return tx.order.create({
           data: {
+            number: 1,
             customerId: customerA,
             productTypeId: productType.id,
             description: "invasão",

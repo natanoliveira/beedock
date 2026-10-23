@@ -15,3 +15,6 @@ export class NotFoundError extends Error {
     super(message);
   }
 }
+
+/** Regra de negócio recusada sem campo associado; a mensagem vai ao usuário como erro do formulário. */
+export class RuleError extends Error {}

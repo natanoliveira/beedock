@@ -14,3 +14,6 @@ export type CategoryInput = z.infer<typeof categorySchema>;
 
 export const paymentMethodSchema = z.object({ name });
 export type PaymentMethodInput = z.infer<typeof paymentMethodSchema>;
+
+export const productTypeSchema = z.object({ name });
+export type ProductTypeInput = z.infer<typeof productTypeSchema>;

@@ -1,6 +1,6 @@
 "use client";
 
-import { Paperclip, Pencil, Receipt, Trash2 } from "lucide-react";
+import { ExternalLink, Paperclip, Pencil, Receipt, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { AppButton } from "@/components/atoms/AppButton";
 import { formatCents } from "@/components/atoms/MoneyText/format";
@@ -50,18 +50,31 @@ export function RowActions({ row, canDelete, onEdit, onReceipt, deleteAction }: 
           <Receipt aria-hidden className="size-4" />
         </AppButton>
       )}
-      <AppButton
-        type="button"
-        tone="ghost"
-        size="icon"
-        className={iconBtn}
-        aria-label={`Editar: ${row.description}`}
-        title="Editar"
-        onClick={() => onEdit(row)}
-      >
-        <Pencil aria-hidden className="size-4" />
-      </AppButton>
-      {canDelete && (
+      {row.order && (
+        <AppButton asChild tone="ghost" size="icon" className={iconBtn}>
+          <Link
+            href={`/pedidos/${row.order.id}`}
+            aria-label={`Abrir o pedido #${row.order.number}`}
+            title="Alterar pelo pedido"
+          >
+            <ExternalLink aria-hidden className="size-4" />
+          </Link>
+        </AppButton>
+      )}
+      {!row.order && (
+        <AppButton
+          type="button"
+          tone="ghost"
+          size="icon"
+          className={iconBtn}
+          aria-label={`Editar: ${row.description}`}
+          title="Editar"
+          onClick={() => onEdit(row)}
+        >
+          <Pencil aria-hidden className="size-4" />
+        </AppButton>
+      )}
+      {canDelete && !row.order && (
         <ConfirmAction
           triggerLabel="Excluir"
           title={`Excluir ${label}?`}

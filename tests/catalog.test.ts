@@ -79,6 +79,7 @@ describe.skipIf(!APP_URL || !OWNER_URL)("service de categorias e formas de pagam
     await owner.membership.deleteMany({ where: inOrgs });
     await owner.category.deleteMany({ where: inOrgs });
     await owner.paymentMethod.deleteMany({ where: inOrgs });
+    await owner.productType.deleteMany({ where: inOrgs });
     await owner.organizationSettings.deleteMany({ where: inOrgs });
     await owner.organization.deleteMany({ where: { id: { in: orgIds } } });
     await owner.user.deleteMany({ where: { id: { in: userIds } } });
@@ -193,5 +194,50 @@ describe.skipIf(!APP_URL || !OWNER_URL)("service de categorias e formas de pagam
     const opts = await tsvc.formOptions(admin);
     expect(opts.categories.find((c) => c.id === cat.id)).toBeUndefined();
     expect(opts.paymentMethods.find((p) => p.id === pm.id)).toBeUndefined();
+  }, T);
+
+  it("tipo de produto: cria, renomeia, desativa e audita", async () => {
+    const { id } = await svc.createProductType(admin, { name: "Avental" });
+    await svc.updateProductType(admin, id, { name: "Avental PRO" });
+    await svc.updateProductType(admin, id, { active: false });
+    expect(await owner.auditLog.findFirst({ where: { action: "product_type.create", entityId: id } })).toBeTruthy();
+    expect(await owner.auditLog.count({ where: { action: "product_type.update", entityId: id } })).toBe(2);
+    expect((await svc.listProductTypes(admin)).find((p) => p.id === id)).toMatchObject({
+      name: "Avental PRO",
+      active: false,
+      usage: 0,
+    });
+  }, T);
+
+  it("tipo de produto: nome repetido (inclusive desativado) vira erro de campo", async () => {
+    const { id } = await svc.createProductType(admin, { name: "Chinelo" });
+    await fieldErr(svc.createProductType(admin, { name: "CHINELO" }), "name", "Já existe 'CHINELO'.");
+    await svc.updateProductType(admin, id, { active: false });
+    await fieldErr(
+      svc.createProductType(admin, { name: "chinelo" }),
+      "name",
+      "Já existe 'chinelo' (desativada). Reative em vez de criar outra.",
+    );
+  }, T);
+
+  it("tipo de produto: Funcionário negado, id de outra empresa é NotFound", async () => {
+    const { NotFoundError } = await import("@/features/platform/errors");
+    await expect(svc.createProductType(staff, { name: "Nada" })).rejects.toBeInstanceOf(perms.ForbiddenError);
+    await expect(svc.listProductTypes(staff)).rejects.toBeInstanceOf(perms.ForbiddenError);
+    const { id } = await svc.createProductType(adminB, { name: "De B" });
+    await expect(svc.updateProductType(admin, id, { name: "Invadido" })).rejects.toBeInstanceOf(NotFoundError);
+  }, T);
+
+  it("categoria de sistema: renomear ok, desativar recusado", async () => {
+    const sys = await owner.category.create({
+      data: { organizationId: orgA, type: "INCOME", name: "Pedidos", systemKey: "ORDER_PAYMENT" },
+    });
+    await svc.updateCategory(admin, sys.id, { name: "Encomendas" });
+    await fieldErr(
+      svc.updateCategory(admin, sys.id, { active: false }),
+      "name",
+      "Esta categoria é usada pelo sistema e não pode ser desativada.",
+    );
+    expect((await owner.category.findUniqueOrThrow({ where: { id: sys.id } })).active).toBe(true);
   }, T);
 });

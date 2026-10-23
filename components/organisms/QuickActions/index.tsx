@@ -1,12 +1,19 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { AppButton } from "@/components/atoms/AppButton";
+import { OrderForm, type OrderFormProps } from "@/components/organisms/OrderForm";
 import { TransactionForm, type FormTarget, type TransactionFormProps } from "@/components/organisms/TransactionForm";
 
-export function QuickActions({ form }: { form: Omit<TransactionFormProps, "target" | "onClose"> }) {
+export function QuickActions({
+  form,
+  order,
+}: {
+  form: Omit<TransactionFormProps, "target" | "onClose">;
+  order: Omit<OrderFormProps, "target" | "onClose">;
+}) {
   const [target, setTarget] = useState<FormTarget | null>(null);
+  const [orderOpen, setOrderOpen] = useState(false);
   return (
     <>
       <section aria-label="Atalhos" className="grid grid-cols-3 gap-2 md:max-w-xl">
@@ -26,11 +33,12 @@ export function QuickActions({ form }: { form: Omit<TransactionFormProps, "targe
         >
           + Saída
         </AppButton>
-        <AppButton asChild>
-          <Link href="/pedidos">+ Pedido</Link>
+        <AppButton type="button" onClick={() => setOrderOpen(true)}>
+          + Pedido
         </AppButton>
       </section>
       <TransactionForm target={target} onClose={() => setTarget(null)} {...form} />
+      <OrderForm target={orderOpen ? "create" : null} onClose={() => setOrderOpen(false)} {...order} />
     </>
   );
 }

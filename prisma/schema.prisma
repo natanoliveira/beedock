@@ -271,6 +271,7 @@ model Category {
   type           TransactionType
   name           String
   active         Boolean         @default(true)
+  systemKey      String?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   createdById    String?
@@ -281,6 +282,7 @@ model Category {
   transactions Transaction[]
 
   @@unique([organizationId, type, name])
+  @@unique([organizationId, systemKey])
   @@unique([organizationId, id])
 }
 
@@ -306,6 +308,7 @@ model PaymentMethod {
 model Order {
   id             String      @id @default(cuid())
   organizationId String      @default(dbgenerated("current_setting('app.current_org'::text, true)"))
+  number         Int
   customerId     String
   productTypeId  String
   description    String
@@ -313,6 +316,7 @@ model Order {
   dueDate        DateTime    @db.Date
   status         OrderStatus @default(OPEN)
   canceledAt     DateTime?
+  deliveredOn    DateTime?   @db.Date
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
   createdById    String?
@@ -323,8 +327,10 @@ model Order {
   customer     Customer       @relation(fields: [organizationId, customerId], references: [organizationId, id])
   productType  ProductType    @relation(fields: [organizationId, productTypeId], references: [organizationId, id])
   payments     OrderPayment[]
+  transactions Transaction[]
 
   @@unique([organizationId, id])
+  @@unique([organizationId, number])
   @@index([organizationId, status, dueDate])
   @@index([customerId])
 }
@@ -364,6 +370,7 @@ model Transaction {
   receiptUrl      String?
   payerName       String?
   payerDocument   String?
+  orderId         String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   createdById     String?
@@ -373,9 +380,11 @@ model Transaction {
   organization  Organization   @relation(fields: [organizationId], references: [id])
   category      Category       @relation(fields: [organizationId, categoryId], references: [organizationId, id])
   paymentMethod PaymentMethod? @relation(fields: [organizationId, paymentMethodId], references: [organizationId, id], onDelete: Restrict)
+  order         Order?         @relation(fields: [organizationId, orderId], references: [organizationId, id])
   orderPayment  OrderPayment?
 
   @@unique([organizationId, id])
+  @@index([organizationId, orderId])
   @@index([organizationId, occurredOn])
   @@index([organizationId, type, categoryId])
 }

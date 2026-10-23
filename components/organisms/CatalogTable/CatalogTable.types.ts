@@ -9,7 +9,7 @@ export type CatalogFormState = {
 
 export type CatalogTableProps = {
   /** "category" mostra o tipo (Entrada/Saída) e pede o tipo ao criar. */
-  kind: "category" | "method";
+  kind: "category" | "method" | "productType";
   items: CatalogItem[];
   /** save*Action: o id (ou null para criar) é vinculado aqui. */
   saveAction: (id: string | null, prev: CatalogFormState, fd: FormData) => Promise<CatalogFormState>;

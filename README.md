@@ -16,7 +16,7 @@ Sistema web responsivo e mobile-first, com várias empresas isoladas por Row Lev
 
 ## Funcionalidades
 
-Estado atual: **Fase 3 — Lançamentos** (sobre a fundação da Fase 1 e o painel da Fase 2).
+Estado atual: **Fase 4 — Clientes e pedidos** (sobre os lançamentos da Fase 3, a fundação da Fase 1 e o painel da Fase 2).
 
 - Login por e-mail e senha, com bloqueio após 5 tentativas, limite por IP e sessão revogável que expira por inatividade
 - Várias empresas com isolamento em duas camadas (aplicação + RLS no PostgreSQL)
@@ -29,8 +29,14 @@ Estado atual: **Fase 3 — Lançamentos** (sobre a fundação da Fase 1 e o pain
 - Comprovante privado: a imagem é reduzida no navegador e normalizada no servidor com `sharp`; PDFs também são aceitos. O arquivo vai para o Vercel Blob em modo private e só é entregue por uma rota autenticada que confere a empresa do usuário
 - Recibo em PDF do lançamento, gerado com `pdf-lib`
 - Barra de progresso fina no topo durante a navegação entre telas
+- Clientes: cadastro com busca por nome ou WhatsApp, link para o WhatsApp, exclusão (só sem pedidos), anonimização LGPD com motivo e lista "Para revisar" pelo prazo de retenção da empresa
+- Pedidos: um item por pedido (tipo de produto, descrição, total e entrega), situação Aberto, Pronto, Entregue ou Cancelado, numeração por empresa (#N), sinal na criação e cliente novo na própria tela
+- Recebimentos ligados aos lançamentos: cada recebimento cria, edita e exclui o lançamento de entrada na mesma transação, com a soma limitada ao total do pedido
+- Cancelamento com estorno (de R$ 0,01 até o recebido), que gera uma saída em Lançamentos sem apagar os recebimentos
+- Início com "A receber (hoje)" e "Próximas entregas"; tipos de produto gerenciados pelo Admin
+- Recibo do pedido em PDF (recebimentos, total, saldo, "QUITADO" ou "CANCELADO")
 
-Próximas fases: clientes e pedidos, painel e relatórios, PWA (veja o Roadmap).
+Próximas fases: relatórios, auditoria, histórico e exportação LGPD, PWA (veja o Roadmap).
 
 ## Stack
 
@@ -168,7 +174,7 @@ O Neon mantém histórico para point-in-time restore (a janela depende do plano)
 - [x] Fase 1: fundação (auth, RLS, auditoria, design system, layout responsivo, CI)
 - [ ] Fase 2: painel da plataforma, configurações da empresa, funcionários e convites, aceite de termos
 - [x] Fase 3: lançamentos com comprovante privado, recibo em PDF, mês financeiro, categorias e formas de pagamento, filtros
-- [ ] Fase 4: clientes (LGPD) e pedidos com recebimentos
+- [x] Fase 4: clientes (LGPD) e pedidos com recebimentos
 - [ ] Fase 5: Início, relatório mensal (PDF/CSV) e telas de auditoria
 - [ ] PWA: manifest, instalação no Android e no iPhone, modo offline
 

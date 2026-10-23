@@ -1,5 +1,5 @@
 ---
-last_mapped: 2026-10-22T23:10:08Z
+last_mapped: 2026-10-22T23:45:00Z
 total_files: 202
 total_tokens: 170571
 ---
@@ -46,18 +46,19 @@ app/                     rotas (App Router)
   (public)/              termos, privacidade — públicas, dinâmicas (`await connection()`), mostram a versão vigente ou "Documento ainda não publicado."
   (app)/                 área da empresa — layout chama requireTenant()
     inicio/ lancamentos/ (+[id]/comprovante, [id]/recibo.pdf route handlers)
-    configuracoes/ (empresa=ADMIN, categorias, formas-de-pagamento, equipe=ADMIN, auditoria=placeholder)
-    clientes/ pedidos/ relatorios/   placeholders (Fases 4–5)
+    configuracoes/ (empresa=ADMIN, categorias, formas-de-pagamento, tipos-de-produto, equipe=ADMIN, auditoria=placeholder)
+    clientes/ (+[id]) pedidos/ (+[id], [id]/recibo.pdf route handler)   Fase 4
+    relatorios/   placeholder (Fase 5)
   (plataforma)/plataforma/  painel MASTER — layout chama requireMaster(); empresas/, usuarios/ (+[id]), termos/ (publicar Termos/Privacidade, versão vigente e nº de aceites)
   api/auth/[...nextauth]/   único API route
 features/                domínio (sem importar components/app — lint)
-  auth/ platform/ members/ transactions/ catalog/ organizations/ (service, logo, actions, schemas, defaults) legal/ (service, rules, schemas, templates, actions) shared/
+  auth/ platform/ members/ transactions/ customers/ orders/ catalog/ organizations/ (service, logo, actions, schemas, defaults) legal/ (service, rules, schemas, templates, actions) shared/
 lib/                     infraestrutura (db, tenant, audit, auth, session, permissions, env, logger…)
 components/              Atomic Design: ui (shadcn cru) → atoms → molecules → organisms → templates
 hooks/use-media-query.ts único hook
-prisma/                  schema, migrations (init, rls_audit, composite_fk, payer, membership_rls, legal_append_only), seed.ts
+prisma/                  schema, migrations (init, rls_audit, composite_fk, payer, membership_rls, legal_append_only, orders_customers), seed.ts
 scripts/                 create-admin, create-org, audit-verify (DIRECT_URL, owner)
-tests/                   integração Neon (isolation, platform, catalog, transactions)
+tests/                   integração Neon (isolation, platform, catalog, transactions, customers, orders, order-payments, order-cancel, order-queries, order-receipt, orders-migration)
 docs/superpowers/        specs + planos Fase 2a, Fase 3 e Usuários/acesso do MASTER; docs/screenshots
 previews/                HTML estático de design (lint-ignored)
 prompt-beedock.md        spec original do produto
@@ -87,7 +88,10 @@ prompt-beedock.md        spec original do produto
 - **members/** (equipe): `service.ts` (`listTeam`, `changeMemberRole`, `setMemberActive`, `linkUser`, `inviteMember`, `revokeInvitation`; `assertCanManage` = ADMIN da empresa ou MASTER; guarda do último Admin ativo com `FOR UPDATE` → `LAST_ADMIN`; `ALREADY_MEMBER`, `USER_NOT_FOUND`); `switch.ts` (`listOrganizationOptions`, `switchOrganization` → `auth.switch_org`, `leaveOrganization`; MASTER entra/sai de qualquer empresa ACTIVE → `platform.org_enter`/`platform.org_leave`); `actions.ts` (invite/link/role/active/revoke com `organizationId` null = empresa da sessão, senão MASTER; `findUserByEmailAction`); `schemas.ts`.
 - **platform/** (MASTER): CRUD de empresa, convite Admin 48h (token só hash SHA-256), suspender/reativar (revoga sessões), logo; `invitations.ts` (público, rate limit); `errors.ts` (`FieldError`, `NotFoundError`); `seed-master.ts`; `invite-flash.ts` (cookie httpOnly 5min); `users.ts` (`listUsers` com busca/filtro por empresa/paginação 50, `getUser`, `findUserByEmail`; tudo em `withScope({ platform: true })`). Convite aceita papel ADMIN ou FUNCIONARIO; e-mail já cadastrado exige a senha atual e vincula (`/convite/[token]`); criar empresa com e-mail existente vincula como Admin sem convite.
 - **transactions/**: `service.ts` (list paginado 50, `monthSummary`, create/update/delete soft, `keepPayerDocument`); `period.ts` (mês financeiro c/ dia inicial + timezone); `money.ts` (`parseBrl`, `valorPorExtenso`); `storage.ts` (Blob privado, magic bytes, `ownsPath`); `receipt*.ts` (PDF pdf-lib, emissão auditada).
-- **catalog/**: categorias + formas de pagamento (ADMIN, `settings.manage`), duplicata case-insensitive, sugestão de reativar.
+- **catalog/**: categorias + formas de pagamento + tipos de produto (ADMIN, `settings.manage`), duplicata case-insensitive, sugestão de reativar; categoria com `systemKey` (Pedidos/Estorno) renomeia mas não desativa.
+- **customers/**: `service.ts` (`listCustomers` com busca e saldo/em andamento sem N+1, `getCustomer`, `customerOptions`, `createCustomer`/`createCustomerInTx` (pedido com cliente novo), `updateCustomer`, `deleteCustomer` (recusa com pedidos), `anonymizeCustomer` (recusa com pedido OPEN/READY; limpa `payerName/payerDocument` dos lançamentos ligados; auditoria com motivo, `before` sem PII), `listCustomersForReview` (retenção, Admin)); `rules.ts` (`anonymizedName`); `schemas.ts`; `actions.ts`. Auditoria guarda `hasNote`, nunca a observação.
+- **orders/**: `service.ts` (`createOrder` com lock `pg_advisory_xact_lock('order:'+org)` para `Order.number`, cliente inline e sinal na mesma tx; `updateOrder`, `changeOrderStatus` (grava `deliveredOn` no fuso da empresa), `deleteOrder`, `cancelOrder` (estorno obrigatório se há recebido → saída `ORDER_REFUND`)); `payments.ts` (`registerPayment`/`updatePayment`/`deletePayment`/`createLinkedPayment`: recebimento + lançamento INCOME `ORDER_PAYMENT` na mesma tx sob `SELECT … FOR UPDATE` do pedido; Σ recebimentos ≤ total; cancelado/excluído recusa); `queries.ts` (`listOrders`, `getOrder`, `amountToReceive`, `upcomingDeliveries`, `orderFormOptions`); `rules.ts` (`canTransition`, saldo, prazo); `receipt.ts`/`receipt-pdf.ts` (recibo do pedido, audita `order.receipt_issue`); `view.ts` (`toViewRow`); `schemas.ts` (campos planos do FormData → objetos aninhados).
+- **transactions/pdf-kit.ts**: cabeçalho da empresa, logo, `safeText`, `wrap`, `beginDocument` compartilhados pelos recibos.
 - **organizations/** (empresa): `service.ts` (`getCompanySettings`, `updateCompanySettings`, `setCompanyLogo` com `FOR UPDATE` na linha da empresa: uploads simultâneos devolvem o `previous` certo e nenhum blob fica órfão; `organization.update` auditado com `userRole` correto), `logo.ts` (`storeLogo`/`deleteLogoBlob`), `actions.ts` (`updateCompanySettingsAction`, upload/remove de logo), `schemas.ts` (`companySettingsSchema` = organizationSchema sem slug).
 - **legal/**: `service.ts` (`currentLegalDocuments`, `pendingLegalDocumentsFor`, `hasPendingLegalDocuments` (hot path: 1 query SQL só com ids, mesmo predicado, teste de concordância), `acceptLegalDocumentsTx`, `publishLegalDocumentTx` + variantes não-Tx, `legalOverview`), `rules.ts` (`pendingDocuments`), `schemas.ts` (recusa `[PREENCHER`), `templates.ts`, `actions.ts` (`acceptTermsAction`, `publishLegalDocumentAction`). Eventos `platform.legal_publish` e `auth.terms_accept` na cadeia da plataforma.
 - **organizations/defaults.ts**: `seedOrganizationDefaults(tx, orgId, settings)` — settings, categorias, formas de pagamento, tipos de produto.
@@ -112,6 +116,7 @@ prompt-beedock.md        spec original do produto
 
 - **Globais (sem RLS)**: `Organization`, `User` (platformRole USER|MASTER, lockout), `Session`, `LegalDocument/Acceptance` (append-only: `beedock_app` sem UPDATE/DELETE/TRUNCATE, como `AuditLog`).
 - **RLS `tenant_or_platform`**: `Membership` (user×org, role ADMIN|FUNCIONARIO, active; login lê no escopo da plataforma), `SupportAccessGrant` (sem uso).
+- **Pedidos**: `Order.number` único por empresa; `Transaction.orderId` liga recebimento (INCOME) e estorno (EXPENSE) ao pedido (FK composta); `Category.systemKey` (`ORDER_PAYMENT`/`ORDER_REFUND`) identifica as categorias do sistema; CHECK `> 0` em `Order.totalCents` e `OrderPayment.amountCents`.
 - **Tenant (RLS `tenant_isolation`)**: OrganizationSettings, Invitation (`tenant_or_platform`), Customer, ProductType, Category, PaymentMethod, Order, OrderPayment, Transaction. `organizationId` default = `current_setting('app.current_org')`. FKs compostas `(organizationId, xId)` impedem referência cross-tenant.
 - **AuditLog**: RLS SELECT/INSERT, UPDATE/DELETE/TRUNCATE revogados + triggers imutáveis; uma cadeia por org + cadeia plataforma (`organizationId` null).
 
@@ -188,7 +193,9 @@ Publicar versão (MASTER, `/plataforma/termos`) cria `LegalDocument` + `platform
 - `pnpm db:seed -- --prune` apaga empresas fora da lista do seed (sobras de teste/QA) e usuários que ficam sem vínculo; recusado em produção e exige `PRUNE_CONFIRM=<host do DIRECT_URL>`.
 - **Testes de integração rodam no MESMO banco do dev** (`TEST_DATABASE_URL`=`DATABASE_URL`): ids escalares nas limpezas de `afterAll` começam como `""`, nunca `undefined` — `where: { x: undefined }` no Prisma remove o filtro e apaga a tabela inteira.
 - Testes de integração pulam silenciosamente sem `TEST_DATABASE_URL`/`TEST_DIRECT_URL`; ambiente vitest `node` (sem DOM).
-- `AppNavigation` linka Pedidos/Clientes/Relatórios (placeholders).
+- Lançamento com `orderId` não é editável nem excluível por `updateTransaction`/`deleteTransaction` (`RuleError`); a tela de Lançamentos mostra o selo "Pedido #N" e leva ao pedido. `RuleError` (features/platform/errors.ts) vira erro de formulário em `toFormState`.
+- `AppNavigation` linka Relatórios (placeholder, Fase 5).
+- `pnpm audit:verify` reporta 5 eventos legados (SHA-256, seq 1–5 de uma empresa antiga do dev): conhecidos, ficam; decisão de limpar segue em aberto.
 - Dark mode só via `prefers-color-scheme`.
 - Node ≥22.12 obrigatório (Neon WebSocket falha em 20). Porta dev 3004.
 

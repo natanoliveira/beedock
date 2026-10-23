@@ -15,8 +15,8 @@ const TYPE_PILL = {
   EXPENSE: { label: "Saída", className: "bg-expense-soft text-expense" },
 } as const;
 
-function usageText(n: number) {
-  return n === 0 ? "Sem uso" : n === 1 ? "1 lançamento" : `${n} lançamentos`;
+function usageText(n: number, unit: "lançamento" | "pedido") {
+  return n === 0 ? "Sem uso" : n === 1 ? `1 ${unit}` : `${n} ${unit}s`;
 }
 
 function ToggleActive({
@@ -67,19 +67,21 @@ function ToggleActive({
 
 export function CatalogTable({ kind, items, saveAction, setActiveAction }: CatalogTableProps) {
   const [target, setTarget] = useState<DialogTarget | null>(null);
-  const noun = kind === "category" ? "categoria" : "forma de pagamento";
+  const masculine = kind === "productType";
+  const noun = { category: "categoria", method: "forma de pagamento", productType: "tipo de produto" }[kind];
 
   return (
     <div className="grid gap-4">
       <div className="flex justify-end">
         <AppButton type="button" onClick={() => setTarget({ mode: "create" })} className="max-md:w-full">
           <Plus aria-hidden className="size-4" />
-          {kind === "category" ? "Nova categoria" : "Nova forma"}
+          {{ category: "Nova categoria", method: "Nova forma", productType: "Novo tipo" }[kind]}
         </AppButton>
       </div>
 
       {items.length === 0 ? (
-        <EmptyState title={`Nenhuma ${noun} ainda`} description="Crie a primeira para usar nos lançamentos." />
+        <EmptyState title={`${masculine ? "Nenhum" : "Nenhuma"} ${noun} ainda`}
+          description={`Crie ${masculine ? "o primeiro" : "a primeira"} para usar nos ${kind === "productType" ? "pedidos" : "lançamentos"}.`} />
       ) : (
         <ul className="bg-card divide-y overflow-hidden rounded-lg border">
           {items.map((item) => (
@@ -89,7 +91,7 @@ export function CatalogTable({ kind, items, saveAction, setActiveAction }: Catal
             >
               <div className="min-w-0 flex-1 basis-48">
                 <p className={cn("truncate font-bold", !item.active && "text-muted-foreground")}>{item.name}</p>
-                <p className="text-muted-foreground text-sm">{usageText(item.usage)}</p>
+                <p className="text-muted-foreground text-sm">{usageText(item.usage, masculine ? "pedido" : "lançamento")}</p>
               </div>
               <div className="flex items-center gap-2">
                 {item.type && (
@@ -108,7 +110,7 @@ export function CatalogTable({ kind, items, saveAction, setActiveAction }: Catal
                     item.active ? "bg-income-soft text-income" : "bg-muted text-muted-foreground",
                   )}
                 >
-                  {item.active ? "Ativa" : "Desativada"}
+                  {item.active ? (masculine ? "Ativo" : "Ativa") : masculine ? "Desativado" : "Desativada"}
                 </span>
               </div>
               <div className="flex gap-2">
@@ -132,6 +134,7 @@ export function CatalogTable({ kind, items, saveAction, setActiveAction }: Catal
         target={target}
         onClose={() => setTarget(null)}
         noun={noun}
+        masculine={masculine}
         withType={kind === "category"}
         saveAction={saveAction}
       />

@@ -3,7 +3,7 @@
 /*
  * Contrato de campos (FormData):
  * - saveCategoryAction: name, type ("INCOME" | "EXPENSE"; ignorado na edição, o tipo não muda).
- * - savePaymentMethodAction: name.
+ * - savePaymentMethodAction, saveProductTypeAction: name.
  * - set*ActiveAction(id, active): argumentos vinculados (não FormData), validados em runtime.
  * fieldErrors usa as mesmas chaves; values devolve os campos enviados.
  */
@@ -12,12 +12,14 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireTenant } from "@/lib/session";
 import { toFormState, plainValues, type FormState } from "@/lib/form-state";
-import { categorySchema, paymentMethodSchema } from "./schemas";
+import { categorySchema, paymentMethodSchema, productTypeSchema } from "./schemas";
 import {
   createCategory,
   createPaymentMethod,
+  createProductType,
   updateCategory,
   updatePaymentMethod,
+  updateProductType,
 } from "./service";
 
 export type { FormState };
@@ -34,6 +36,7 @@ function revalidate(path: string) {
 
 const CATEGORIES = "/configuracoes/categorias";
 const METHODS = "/configuracoes/formas-de-pagamento";
+const PRODUCT_TYPES = "/configuracoes/tipos-de-produto";
 
 export async function saveCategoryAction(id: string | null, _prev: FormState, fd: FormData): Promise<FormState> {
   const values = plainValues(fd);
@@ -84,5 +87,32 @@ export async function setPaymentMethodActiveAction(id: string, active: boolean):
     return toFormState(e, NOT_FOUND);
   }
   revalidate(METHODS);
+  return { ok: true };
+}
+
+export async function saveProductTypeAction(id: string | null, _prev: FormState, fd: FormData): Promise<FormState> {
+  const values = plainValues(fd);
+  try {
+    const ctx = await requireTenant();
+    const input = productTypeSchema.parse(values);
+    if (id === null) await createProductType(ctx, input);
+    else await updateProductType(ctx, idSchema.parse(id), { name: input.name });
+  } catch (e) {
+    return toFormState(e, NOT_FOUND, values);
+  }
+  revalidate(PRODUCT_TYPES);
+  revalidatePath("/pedidos");
+  return { ok: true };
+}
+
+export async function setProductTypeActiveAction(id: string, active: boolean): Promise<FormState> {
+  try {
+    const ctx = await requireTenant();
+    await updateProductType(ctx, idSchema.parse(id), { active: activeSchema.parse(active) });
+  } catch (e) {
+    return toFormState(e, NOT_FOUND);
+  }
+  revalidate(PRODUCT_TYPES);
+  revalidatePath("/pedidos");
   return { ok: true };
 }

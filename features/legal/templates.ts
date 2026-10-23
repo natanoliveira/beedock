@@ -44,8 +44,9 @@ Operadores e provedores de infraestrutura.
 
 6. Armazenamento
 [PREENCHER: região dos dados] e prazos de retenção.
+Os registros de auditoria (quem fez o quê e quando) são imutáveis por desenho e ficam guardados por 5 anos por obrigação legal. Eles podem conter o nome do titular e o contato mascarado, mesmo depois da anonimização do cadastro do cliente.
 
 7. Direitos do titular
-Acesso, correção, eliminação e demais direitos da LGPD, pelo contato do encarregado.
+Acesso, correção, eliminação e demais direitos da LGPD, pelo contato do encarregado. A eliminação é feita pela anonimização do cadastro: nome, WhatsApp, e-mail, documento e endereço são apagados, inclusive dos lançamentos dos pedidos do cliente.
 `,
 };

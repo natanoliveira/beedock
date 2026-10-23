@@ -1,41 +1,14 @@
 import { z } from "zod";
 import { isValidDocument, onlyDigits } from "@/lib/document";
-import { parseBrl, parseBrlDetailed } from "./money";
+import { amountField, dateField, optional, textParam } from "@/features/shared/zod";
+import { parseBrl } from "./money";
 import { parseYearMonth, type YearMonth } from "./period";
-
-const emptyToUndefined = (v: unknown) =>
-  typeof v === "string" && v.trim() === "" ? undefined : v;
-
-const optional = <T extends z.ZodType>(schema: T) =>
-  z.preprocess(emptyToUndefined, schema.optional());
-
-const AMOUNT_MSG = "Informe um valor maior que zero.";
-
-const isRealDate = (s: string) => {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-  if (!m) return false;
-  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
-  const dt = new Date(Date.UTC(y, mo - 1, d));
-  return dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === d;
-};
 
 export const transactionSchema = z
   .object({
     type: z.enum(["INCOME", "EXPENSE"], "Escolha entrada ou saída."),
-    amount: z
-      .string(AMOUNT_MSG)
-      .superRefine((v, ctx) => {
-        const r = parseBrlDetailed(v);
-        if (!r.ok) {
-          ctx.addIssue({
-            code: "custom",
-            message: r.reason === "too_big" ? "Valor máximo de R$ 1.000.000,00." : AMOUNT_MSG,
-          });
-        }
-      }),
-    occurredOn: z
-      .string("Informe a data.")
-      .refine(isRealDate, "Informe uma data válida."),
+    amount: amountField,
+    occurredOn: dateField,
     categoryId: z.string("Escolha uma categoria.").min(1, "Escolha uma categoria."),
     paymentMethodId: optional(z.string()),
     description: z
@@ -71,7 +44,7 @@ export const transactionSchema = z
   .transform(({ amount, ...rest }) => ({ ...rest, amountCents: parseBrl(amount)! }));
 export type TransactionInput = z.output<typeof transactionSchema>;
 
-const param = (v: unknown) => (typeof v === "string" && v.trim() !== "" ? v.trim() : undefined);
+const param = textParam;
 
 export const listFiltersSchema = z
   .object({

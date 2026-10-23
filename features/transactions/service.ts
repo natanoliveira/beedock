@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { TransactionType } from "@/generated/prisma/enums";
-import { FieldError, NotFoundError } from "@/features/platform/errors";
+import { FieldError, NotFoundError, RuleError } from "@/features/platform/errors";
 import { authorize, diff, withAudit, type TenantContext } from "@/lib/audit";
 import { withScope, type Tx } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -10,6 +10,7 @@ import { currentFinancialMonth, financialMonthRange, todayIn, type YearMonth } f
 import type { ListFilters, TransactionInput } from "./schemas";
 
 const PAGE_SIZE = 50;
+const ORDER_OWNED = "Este lançamento é de um pedido. Altere pelo pedido.";
 
 export type TransactionRow = {
   id: string;
@@ -22,11 +23,14 @@ export type TransactionRow = {
   payerName: string | null;
   payerDocumentMasked: string | null;
   hasReceipt: boolean;
+  /** Lançamento gerado por pedido (recebimento ou estorno): só se altera pelo pedido. */
+  order: { id: string; number: number } | null;
 };
 
 const rowInclude = {
   category: { select: { id: true, name: true, active: true } },
   paymentMethod: { select: { id: true, name: true, active: true } },
+  order: { select: { id: true, number: true } },
 } as const;
 
 const toDate = (s: string) => new Date(`${s}T00:00:00.000Z`);
@@ -43,6 +47,7 @@ type DbRow = {
   payerDocument: string | null;
   category: { id: string; name: string; active: boolean };
   paymentMethod: { id: string; name: string; active: boolean } | null;
+  order: { id: string; number: number } | null;
 };
 
 const toRow = (r: DbRow): TransactionRow => ({
@@ -56,6 +61,7 @@ const toRow = (r: DbRow): TransactionRow => ({
   payerName: r.payerName,
   payerDocumentMasked: maskDocument(r.payerDocument),
   hasReceipt: r.receiptUrl !== null,
+  order: r.order,
 });
 
 const maskDocument = (d: string | null) =>
@@ -310,6 +316,7 @@ export async function updateTransaction(
         await tx.$executeRaw`SELECT 1 FROM "Transaction" WHERE id = ${id} FOR UPDATE`;
         const existing = await tx.transaction.findFirst({ where: { id, deletedAt: null } });
         if (!existing) throw new NotFoundError("Lançamento não encontrado.");
+        if (existing.orderId) throw new RuleError(ORDER_OWNED);
         await checkRefs(tx, input, existing);
         const receiptUrl = newReceipt ?? (input.removeReceipt ? null : existing.receiptUrl);
         const data = fields(input);
@@ -354,6 +361,7 @@ export async function deleteTransaction(ctx: TenantContext, id: string): Promise
     async (tx) => {
       const existing = await tx.transaction.findFirst({ where: { id, deletedAt: null } });
       if (!existing) throw new NotFoundError("Lançamento não encontrado.");
+      if (existing.orderId) throw new RuleError(ORDER_OWNED);
       await tx.transaction.update({ where: { id }, data: { deletedAt: new Date(), updatedById: ctx.userId } });
       return snapshot(existing);
     },

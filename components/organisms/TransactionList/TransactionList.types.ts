@@ -16,6 +16,7 @@ export type ListRow = {
   payerName: string | null;
   payerDocumentMasked: string | null;
   hasReceipt: boolean;
+  order: { id: string; number: number } | null;
 };
 
 export type TransactionListProps = {

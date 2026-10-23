@@ -7,13 +7,13 @@ import { AppButton } from "@/components/atoms/AppButton";
 import { appButtonVariants } from "@/components/atoms/AppButton/variants";
 import { cn } from "@/lib/utils";
 
-type Props = { transactionId: string };
+type Props = { transactionId?: string; /** Rota do PDF; o padrão é o recibo do lançamento. */ url?: string; filename?: string };
 
 const SHARE_TIP = "PDF baixado. Anexe o arquivo no WhatsApp ou e-mail do cliente.";
 
 /** Cada clique gera o PDF (e um evento de auditoria); por isso nada aqui faz prefetch. */
-export function ReceiptActions({ transactionId }: Props) {
-  const url = `/lancamentos/${transactionId}/recibo.pdf`;
+export function ReceiptActions({ transactionId, url: urlProp, filename = "recibo.pdf" }: Props) {
+  const url = urlProp ?? `/lancamentos/${transactionId}/recibo.pdf`;
   const [sharing, setSharing] = useState(false);
   const [tip, setTip] = useState<string | null>(null);
   const cached = useRef<File | null>(null);
@@ -39,7 +39,7 @@ export function ReceiptActions({ transactionId }: Props) {
       if (!cached.current) {
         const res = await fetch(url);
         if (!res.ok) throw new Error(String(res.status));
-        cached.current = new File([await res.blob()], "recibo.pdf", { type: "application/pdf" });
+        cached.current = new File([await res.blob()], filename, { type: "application/pdf" });
       }
       const file = cached.current;
       if (!navigator.canShare?.({ files: [file] })) return download(file);

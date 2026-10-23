@@ -12,6 +12,7 @@ const LINKS = [
   { href: "/configuracoes/equipe", title: "Equipe", text: "Convide pessoas e defina papéis." },
   { href: "/configuracoes/categorias", title: "Categorias", text: "Organize entradas e saídas." },
   { href: "/configuracoes/formas-de-pagamento", title: "Formas de pagamento", text: "Pix, dinheiro, cartão e outras." },
+  { href: "/configuracoes/tipos-de-produto", title: "Tipos de produto", text: "Camisa, caneca, boné e outros." },
 ];
 
 export default async function Page() {

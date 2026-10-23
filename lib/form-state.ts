@@ -2,7 +2,7 @@ import { unstable_rethrow } from "next/navigation";
 import { ZodError } from "zod";
 import { ForbiddenError } from "@/lib/permissions";
 import { logger } from "@/lib/logger";
-import { FieldError, NotFoundError } from "@/features/platform/errors";
+import { FieldError, NotFoundError, RuleError } from "@/features/platform/errors";
 
 export type FormState = {
   ok?: boolean;
@@ -19,6 +19,7 @@ export function toFormState(e: unknown, notFound: string, values?: Record<string
     return { fieldErrors, values };
   }
   if (e instanceof FieldError) return { fieldErrors: { [e.field]: e.message }, values };
+  if (e instanceof RuleError) return { error: e.message, values };
   if (e instanceof NotFoundError) return { error: notFound, values };
   if (e instanceof ForbiddenError) return { error: e.message, values };
   unstable_rethrow(e);

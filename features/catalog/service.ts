@@ -3,10 +3,11 @@ import type { TransactionType } from "@/generated/prisma/enums";
 import { FieldError, NotFoundError } from "@/features/platform/errors";
 import { authorize, diff, withAudit, type TenantContext } from "@/lib/audit";
 import { withScope } from "@/lib/db";
-import type { CategoryInput, PaymentMethodInput } from "./schemas";
+import type { CategoryInput, PaymentMethodInput, ProductTypeInput } from "./schemas";
 
 export type CategoryRow = { id: string; name: string; type: TransactionType; active: boolean; usage: number };
 export type PaymentMethodRow = { id: string; name: string; active: boolean; usage: number };
+export type ProductTypeRow = PaymentMethodRow;
 
 const isUnique = (e: unknown) => e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
 
@@ -102,6 +103,9 @@ export async function updateCategory(
       async (tx) => {
         const existing = await tx.category.findFirst({ where: { id, deletedAt: null } });
         if (!existing) throw new NotFoundError("Categoria não encontrada.");
+        if (patch.active === false && existing.systemKey) {
+          throw new FieldError("name", "Esta categoria é usada pelo sistema e não pode ser desativada.");
+        }
         if (patch.name !== undefined) {
           const dup = await tx.category.findFirst({
             where: { type: existing.type, name: ci(patch.name), NOT: { id } },
@@ -177,6 +181,90 @@ export async function updatePaymentMethod(
           if (dup) throw duplicate(patch.name, dup.active);
         }
         const row = await tx.paymentMethod.update({
+          where: { id },
+          data: { name: patch.name ?? existing.name, active: patch.active ?? existing.active },
+        });
+        return {
+          before: { name: existing.name, active: existing.active },
+          after: { name: row.name, active: row.active },
+        };
+      },
+    );
+  } catch (e) {
+    if (isUnique(e)) throw duplicate(patch.name ?? "");
+    throw e;
+  }
+}
+
+export async function listProductTypes(ctx: TenantContext): Promise<ProductTypeRow[]> {
+  await authorize(ctx, "settings.manage");
+  return withScope({ organizationId: ctx.organizationId }, async (tx) => {
+    const rows = await tx.productType.findMany({
+      where: { deletedAt: null },
+      select: {
+        id: true,
+        name: true,
+        active: true,
+        _count: { select: { orders: { where: { deletedAt: null } } } },
+      },
+      orderBy: { name: "asc" },
+    });
+    return rows.map(({ _count, ...r }) => ({ ...r, usage: _count.orders }));
+  });
+}
+
+export async function createProductType(ctx: TenantContext, input: ProductTypeInput): Promise<{ id: string }> {
+  await authorize(ctx, "settings.manage");
+  try {
+    return await withAudit(
+      ctx,
+      (r: { id: string; after: Record<string, unknown> }) => ({
+        action: "product_type.create",
+        entityType: "ProductType",
+        entityId: r.id,
+        after: r.after,
+      }),
+      async (tx) => {
+        const dup = await tx.productType.findFirst({ where: { name: ci(input.name) }, select: { active: true } });
+        if (dup) throw duplicate(input.name, dup.active);
+        const row = await tx.productType.create({
+          data: { name: input.name } as Prisma.ProductTypeUncheckedCreateInput,
+        });
+        return { id: row.id, after: { name: row.name, active: row.active } };
+      },
+    ).then((r) => ({ id: r.id }));
+  } catch (e) {
+    if (isUnique(e)) throw duplicate(input.name);
+    throw e;
+  }
+}
+
+export async function updateProductType(
+  ctx: TenantContext,
+  id: string,
+  patch: { name?: string; active?: boolean },
+): Promise<void> {
+  await authorize(ctx, "settings.manage");
+  try {
+    await withAudit(
+      ctx,
+      (r: { before: Record<string, unknown>; after: Record<string, unknown> }) => ({
+        action: "product_type.update",
+        entityType: "ProductType",
+        entityId: id,
+        ...diff(r.before, r.after),
+      }),
+      async (tx) => {
+        const existing = await tx.productType.findFirst({ where: { id, deletedAt: null } });
+        if (!existing) throw new NotFoundError("Tipo de produto não encontrado.");
+        if (patch.name !== undefined) {
+          const dup = await tx.productType.findFirst({
+            where: { name: ci(patch.name), NOT: { id } },
+            select: { active: true },
+          });
+          if (dup) throw duplicate(patch.name, dup.active);
+        }
+        const row = await tx.productType.update({
           where: { id },
           data: { name: patch.name ?? existing.name, active: patch.active ?? existing.active },
         });

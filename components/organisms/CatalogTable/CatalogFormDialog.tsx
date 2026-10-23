@@ -34,6 +34,7 @@ type Props = {
   target: DialogTarget | null;
   onClose: () => void;
   noun: string;
+  masculine?: boolean;
   withType: boolean;
   saveAction: (id: string | null, prev: CatalogFormState, fd: FormData) => Promise<CatalogFormState>;
 };
@@ -116,7 +117,7 @@ function Body({ target, onClose, withType, saveAction, noun }: Props & { target:
   );
 }
 
-export function CatalogFormDialog({ target, onClose, noun, ...rest }: Props) {
+export function CatalogFormDialog({ target, onClose, noun, masculine, ...rest }: Props) {
   const [seen, setSeen] = useState<{ target: DialogTarget | null; last: DialogTarget | null; session: number }>({
     target,
     last: target,
@@ -130,7 +131,7 @@ export function CatalogFormDialog({ target, onClose, noun, ...rest }: Props) {
     <AppDialog open={target !== null} onOpenChange={(o) => !o && onClose()}>
       <AppDialogContent>
         <AppDialogHeader>
-          <AppDialogTitle>{shown?.mode === "rename" ? `Renomear ${noun}` : `Nova ${noun}`}</AppDialogTitle>
+          <AppDialogTitle>{shown?.mode === "rename" ? `Renomear ${noun}` : `${masculine ? "Novo" : "Nova"} ${noun}`}</AppDialogTitle>
           <AppDialogDescription>Enter salva, Esc fecha.</AppDialogDescription>
         </AppDialogHeader>
         {shown && <Body key={seen.session} target={shown} onClose={onClose} noun={noun} {...rest} />}
