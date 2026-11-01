@@ -35,8 +35,11 @@ Estado atual: **Fase 4 — Clientes e pedidos** (sobre os lançamentos da Fase 3
 - Cancelamento com estorno (de R$ 0,01 até o recebido), que gera uma saída em Lançamentos sem apagar os recebimentos
 - Início com "A receber (hoje)" e "Próximas entregas"; tipos de produto gerenciados pelo Admin
 - Recibo do pedido em PDF (recebimentos, total, saldo, "QUITADO" ou "CANCELADO")
+- Relatório mensal (`/relatorios`): entradas, saídas, lucro, categorias, últimos 6 meses e pedidos, com PDF e CSV dos lançamentos (Admin)
+- Auditoria legível da empresa (`/configuracoes/auditoria`) e da plataforma (`/plataforma/auditoria`): filtros, detalhe antes/depois, verificação da cadeia e CSV; histórico por pedido, cliente e lançamento
+- Exportação de dados em JSON (LGPD): cliente, membro e empresa; toda exportação grava evento de auditoria antes de entregar o arquivo
 
-Próximas fases: relatórios, auditoria, histórico e exportação LGPD, PWA (veja o Roadmap).
+Próximas fases: deploy e piloto, PWA (veja o Roadmap).
 
 ## Stack
 
@@ -176,7 +179,7 @@ O Neon mantém histórico para point-in-time restore (a janela depende do plano)
 - [ ] Fase 2: painel da plataforma, configurações da empresa, funcionários e convites, aceite de termos
 - [x] Fase 3: lançamentos com comprovante privado, recibo em PDF, mês financeiro, categorias e formas de pagamento, filtros
 - [x] Fase 4: clientes (LGPD) e pedidos com recebimentos
-- [ ] Fase 5: Início, relatório mensal (PDF/CSV) e telas de auditoria
+- [x] Fase 5: relatório mensal (PDF/CSV), telas de auditoria, histórico por registro e exportação LGPD
 - [ ] PWA: manifest, instalação no Android e no iPhone, modo offline
 
 ## Licença

@@ -41,6 +41,7 @@ export type CustomerDetailProps = {
   customer: CustomerDetailData;
   canDelete: boolean;
   canAnonymize: boolean;
+  canExport: boolean;
   saveAction: (id: string | null, prev: FormState, fd: FormData) => Promise<FormState>;
   deleteAction: (id: string) => Promise<FormState>;
   anonymizeAction: (id: string, prev: FormState, fd: FormData) => Promise<FormState>;
@@ -56,7 +57,7 @@ function Info({ label, value }: { label: string; value: string | null }) {
   );
 }
 
-export function CustomerDetail({ customer: c, canDelete, canAnonymize, saveAction, deleteAction, anonymizeAction }: CustomerDetailProps) {
+export function CustomerDetail({ customer: c, canDelete, canAnonymize, canExport, saveAction, deleteAction, anonymizeAction }: CustomerDetailProps) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
 
@@ -152,6 +153,11 @@ export function CustomerDetail({ customer: c, canDelete, canAnonymize, saveActio
               return r;
             }}
           />
+        )}
+        {canExport && (
+          <AppButton asChild tone="outline">
+            <a href={`/clientes/${c.id}/dados.json`}>Exportar dados (LGPD)</a>
+          </AppButton>
         )}
         {canAnonymize && !c.anonymized && (
           <CustomerAnonymize customerId={c.id} customerName={c.name} action={anonymizeAction} />

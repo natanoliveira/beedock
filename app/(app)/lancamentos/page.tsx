@@ -62,6 +62,7 @@ export default async function Page({
       }}
       filterCategories={filterCategories}
       canDelete={can(ctx.role, "transaction.delete")}
+      canAudit={can(ctx.role, "audit.view")}
       deleteAction={deleteTransactionAction}
       form={{
         categories: options.categories,

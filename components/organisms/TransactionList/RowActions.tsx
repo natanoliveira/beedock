@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Paperclip, Pencil, Receipt, Trash2 } from "lucide-react";
+import { ExternalLink, History, Paperclip, Pencil, Receipt, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { AppButton } from "@/components/atoms/AppButton";
 import { formatCents } from "@/components/atoms/MoneyText/format";
@@ -11,6 +11,7 @@ import type { ListRow } from "./TransactionList.types";
 type Props = {
   row: ListRow;
   canDelete: boolean;
+  canAudit: boolean;
   onEdit: (row: ListRow) => void;
   onReceipt: (row: ListRow) => void;
   deleteAction: (id: string) => Promise<FormState>;
@@ -18,11 +19,22 @@ type Props = {
 
 const iconBtn = "size-11 md:size-9";
 
-export function RowActions({ row, canDelete, onEdit, onReceipt, deleteAction }: Props) {
+export function RowActions({ row, canDelete, canAudit, onEdit, onReceipt, deleteAction }: Props) {
   const income = row.type === "INCOME";
   const label = `${income ? "a entrada" : "a saída"} '${row.description}' de ${formatCents(row.amountCents)}`;
   return (
     <div className="flex items-center justify-end gap-0.5">
+      {canAudit && (
+        <AppButton asChild tone="ghost" size="icon" className={iconBtn}>
+          <Link
+            href={`/configuracoes/auditoria?entityType=Transaction&entityId=${row.id}`}
+            aria-label={`Histórico: ${row.description}`}
+            title="Histórico"
+          >
+            <History aria-hidden className="size-4" />
+          </Link>
+        </AppButton>
+      )}
       {row.hasReceipt && (
         <AppButton asChild tone="ghost" size="icon" className={iconBtn}>
           {/* abre o arquivo privado (rota exige sessão); sem prefetch */}

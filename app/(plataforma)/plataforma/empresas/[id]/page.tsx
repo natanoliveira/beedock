@@ -53,7 +53,13 @@ export default async function EmpresaPage({
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-3xl leading-none font-black">{org.name}</h1>
           <OrgStatusBadge status={org.status} />
-          <div className="ml-auto">
+          <div className="ml-auto flex flex-wrap gap-2">
+            <a
+              href={`/plataforma/empresas/${id}/empresa.json`}
+              className="hover:bg-muted inline-flex h-12 items-center rounded-lg border px-4 text-sm font-bold"
+            >
+              Exportar dados (JSON)
+            </a>
             <EnterOrgButton
               enterAction={switchOrganizationAction.bind(null, id)}
               disabled={org.status !== "ACTIVE"}

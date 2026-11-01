@@ -33,7 +33,7 @@ const rowInclude = {
   order: { select: { id: true, number: true } },
 } as const;
 
-const toDate = (s: string) => new Date(`${s}T00:00:00.000Z`);
+export const toDate = (s: string) => new Date(`${s}T00:00:00.000Z`);
 const toIso = (d: Date) => d.toISOString().slice(0, 10);
 
 type DbRow = {
@@ -101,7 +101,7 @@ export async function getFinancialSettings(ctx: TenantContext): Promise<{ startD
 
 type Totals = { incomeCents: number; expenseCents: number; profitCents?: number };
 
-async function sumByType(tx: Tx, where: object): Promise<{ incomeCents: number; expenseCents: number }> {
+export async function sumByType(tx: Tx, where: object): Promise<{ incomeCents: number; expenseCents: number }> {
   const groups = await tx.transaction.groupBy({ by: ["type"], where, _sum: { amountCents: true } });
   const sum = (t: TransactionType) => groups.find((g) => g.type === t)?._sum.amountCents ?? 0;
   return { incomeCents: sum("INCOME"), expenseCents: sum("EXPENSE") };

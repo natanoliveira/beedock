@@ -39,6 +39,7 @@ export function TransactionList({
   filters,
   filterCategories,
   canDelete,
+  canAudit,
   form,
   deleteAction,
 }: TransactionListProps) {
@@ -77,6 +78,7 @@ export function TransactionList({
     <RowActions
       row={r}
       canDelete={canDelete}
+      canAudit={canAudit}
       deleteAction={deleteAction}
       onReceipt={setReceiptRow}
       onEdit={(row) => setTarget({ mode: "edit", row })}

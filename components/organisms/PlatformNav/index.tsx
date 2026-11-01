@@ -11,10 +11,11 @@ const ITEMS = [
     match: (p: string) => p === "/plataforma" || p.startsWith("/plataforma/empresas"),
   },
   { href: "/plataforma/usuarios", label: "Usuários", match: (p: string) => p.startsWith("/plataforma/usuarios") },
+  { href: "/plataforma/auditoria", label: "Auditoria", match: (p: string) => p.startsWith("/plataforma/auditoria") },
   { href: "/plataforma/termos", label: "Termos", match: (p: string) => p.startsWith("/plataforma/termos") },
 ];
 
-/** Menu da plataforma (MASTER): Empresas | Usuários | Termos. */
+/** Menu da plataforma (MASTER): Empresas | Usuários | Auditoria | Termos. */
 export function PlatformNav({ className }: { className?: string }) {
   const pathname = usePathname();
   return (

@@ -1,4 +1,4 @@
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Download } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AdminOnlyNotice } from "@/components/molecules/AdminOnlyNotice";
@@ -37,6 +37,22 @@ export default async function Page() {
               </Link>
             </li>
           ))}
+          {can(role, "company.export") && (
+            <li>
+              <a
+                href="/configuracoes/exportar/empresa.json"
+                className="bg-card hover:bg-muted focus-visible:ring-ring/50 flex min-h-14 items-center justify-between gap-3 rounded-lg border p-4 outline-none focus-visible:ring-3"
+              >
+                <span>
+                  <span className="font-heading block font-bold">Exportar dados da empresa</span>
+                  <span className="text-muted-foreground text-sm">
+                    Arquivo JSON com tudo da empresa. Contém dados pessoais de clientes e equipe. Guarde com cuidado.
+                  </span>
+                </span>
+                <Download aria-hidden className="size-5" />
+              </a>
+            </li>
+          )}
         </ul>
       ) : (
         <AdminOnlyNotice />

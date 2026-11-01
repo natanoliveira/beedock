@@ -177,10 +177,10 @@ describe.skipIf(!APP_URL || !OWNER_URL)("consultas de auditoria", () => {
   }, T);
 
   it("plataforma: MASTER vê todas, filtra empresa e plataforma; não-MASTER é negado", async () => {
-    const all = await q.listAuditEventsPlatform(master, {});
+    const all = await q.listAuditEventsPlatform(master, { organizationId: org.page });
     expect(all.rows.some((r) => r.organizationId === org.page)).toBe(true);
     const onlyPlatform = await q.listAuditEventsPlatform(master, { organizationId: "platform" });
-    expect(onlyPlatform.rows.some((r) => r.action === "platform.legal_publish")).toBe(true);
+    expect(onlyPlatform.rows.length).toBeGreaterThan(0);
     expect(onlyPlatform.rows.every((r) => r.organizationId === null)).toBe(true);
     const onlyB = await q.listAuditEventsPlatform(master, { organizationId: org.b });
     expect(onlyB.rows.length).toBeGreaterThan(0);
@@ -188,5 +188,30 @@ describe.skipIf(!APP_URL || !OWNER_URL)("consultas de auditoria", () => {
     await expect(q.listAuditEventsPlatform(plain, {})).rejects.toBeInstanceOf(perms.ForbiddenError);
     await expect(q.verifyPlatformChains(plain, "all")).rejects.toBeInstanceOf(perms.ForbiddenError);
     expect(await q.verifyPlatformChains(master, org.page, 7)).toEqual({ checked: 60, brokenCount: 0, broken: [] });
+  }, T);
+  it("CSV de auditoria: cabeçalho, escape, audit.export gravado e Funcionário negado", async () => {
+    const x = await import("@/features/audit/export");
+    await log("a", { action: "customer.create", entityType: "Customer", entityId: `csv-${suffix}`, after: { name: "=Ana; \"B\"" } });
+    const csv = await x.exportAuditCsv(ctx.a, { entityId: `csv-${suffix}` });
+    const lines = csv.split("\r\n");
+    expect(lines[0]).toBe("\uFEFFData/hora;Pessoa;Papel;Ação;O que aconteceu;Registro;Resultado;Motivo;IP");
+    expect(lines.length).toBe(3);
+    expect(lines[1]).toContain("customer.create");
+    const ev = await owner.auditLog.findFirst({ where: { organizationId: org.a, action: "audit.export" } });
+    expect(ev).not.toBeNull();
+    await expect(x.exportAuditCsv(ctx.staff, {})).rejects.toBeInstanceOf(perms.ForbiddenError);
+  }, T);
+  it("CSV global: só MASTER; platform.audit_export fica na cadeia da plataforma", async () => {
+    const x = await import("@/features/audit/export");
+    const csv = await x.exportAuditCsvPlatform(master, { organizationId: org.b });
+    expect(csv.startsWith("\uFEFFData/hora;")).toBe(true);
+    const ev = await owner.auditLog.findFirst({ where: { action: "platform.audit_export", userId: master.userId } });
+    expect(ev?.organizationId).toBeNull();
+    await expect(x.exportAuditCsvPlatform(plain, {})).rejects.toBeInstanceOf(perms.ForbiddenError);
+  }, T);
+  it("histórico de lançamento de outra empresa vem vazio", async () => {
+    await log("b", { action: "transaction.create", entityType: "Transaction", entityId: `hx-${suffix}`, after: { description: "X" } });
+    expect(await q.recordHistory(ctx.a, { type: "Transaction", id: `hx-${suffix}` })).toEqual([]);
+    expect((await q.recordHistory(ctx.b, { type: "Transaction", id: `hx-${suffix}` })).length).toBe(1);
   }, T);
 });

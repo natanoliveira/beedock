@@ -13,6 +13,8 @@ import { getOrder, orderFormOptions } from "@/features/orders/queries";
 import { dueLabel } from "@/features/orders/rules";
 import { todayIn } from "@/features/transactions/period";
 import { getFinancialSettings } from "@/features/transactions/service";
+import { recordHistory } from "@/features/audit/queries";
+import { RecordHistory } from "@/components/organisms/RecordHistory";
 import { can } from "@/lib/permissions";
 import { requireTenant } from "@/lib/session";
 
@@ -28,44 +30,54 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     getFinancialSettings(ctx),
   ]);
   const today = todayIn(settings.timezone);
+  const history = can(ctx.role, "audit.view") ? await recordHistory(ctx, { type: "Order", id }) : null;
 
   return (
-    <OrderDetail
-      order={{
-        id: order.id,
-        number: order.number,
-        status: order.status,
-        description: order.description,
-        productTypeId: order.productType.id,
-        productTypeName: order.productType.name,
-        dueDate: order.dueDate,
-        dueLabel: dueLabel(order.dueDate, today),
-        overdue: order.overdue,
-        deliveredOn: order.deliveredOn,
-        canceledAt: order.canceledAt,
-        totalCents: order.totalCents,
-        paidCents: order.paidCents,
-        balanceCents: order.balanceCents,
-        customer: order.customer,
-        payments: order.payments.map((p) => ({
-          id: p.id,
-          paidAt: p.paidAt,
-          amountCents: p.amountCents,
-          methodId: p.method.id,
-          methodName: p.method.name,
-          transactionId: p.transactionId,
-        })),
-        refund: order.refund && { amountCents: order.refund.amountCents, occurredOn: order.refund.occurredOn },
-      }}
-      options={options}
-      today={today}
-      canDelete={can(ctx.role, "order.delete")}
-      saveOrderAction={saveOrderAction}
-      changeStatusAction={changeOrderStatusAction}
-      deleteOrderAction={deleteOrderAction}
-      savePaymentAction={savePaymentAction}
-      deletePaymentAction={deletePaymentAction}
-      cancelOrderAction={cancelOrderAction}
-    />
+    <>
+      <OrderDetail
+        order={{
+          id: order.id,
+          number: order.number,
+          status: order.status,
+          description: order.description,
+          productTypeId: order.productType.id,
+          productTypeName: order.productType.name,
+          dueDate: order.dueDate,
+          dueLabel: dueLabel(order.dueDate, today),
+          overdue: order.overdue,
+          deliveredOn: order.deliveredOn,
+          canceledAt: order.canceledAt,
+          totalCents: order.totalCents,
+          paidCents: order.paidCents,
+          balanceCents: order.balanceCents,
+          customer: order.customer,
+          payments: order.payments.map((p) => ({
+            id: p.id,
+            paidAt: p.paidAt,
+            amountCents: p.amountCents,
+            methodId: p.method.id,
+            methodName: p.method.name,
+            transactionId: p.transactionId,
+          })),
+          refund: order.refund && { amountCents: order.refund.amountCents, occurredOn: order.refund.occurredOn },
+        }}
+        options={options}
+        today={today}
+        canDelete={can(ctx.role, "order.delete")}
+        saveOrderAction={saveOrderAction}
+        changeStatusAction={changeOrderStatusAction}
+        deleteOrderAction={deleteOrderAction}
+        savePaymentAction={savePaymentAction}
+        deletePaymentAction={deletePaymentAction}
+        cancelOrderAction={cancelOrderAction}
+      />
+      {history && (
+        <RecordHistory
+          rows={history}
+          timezone={settings.timezone}
+          auditHref={`/configuracoes/auditoria?entityType=Order&entityId=${id}`}
+        />
+      )}
+    </>
   );
 }

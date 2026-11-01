@@ -70,6 +70,9 @@ export function TeamManager({
 
   const memberActions = (m: TeamMember) => (
     <div className="flex flex-wrap gap-2">
+      <AppButton asChild tone="outline">
+        <a href={`/configuracoes/equipe/${m.userId}/dados.json`}>Exportar dados</a>
+      </AppButton>
       <ConfirmAction
         withReason={false}
         triggerLabel={`Tornar ${ROLE[OTHER_ROLE[m.role]]}`}

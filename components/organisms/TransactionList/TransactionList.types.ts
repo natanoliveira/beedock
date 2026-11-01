@@ -37,6 +37,7 @@ export type TransactionListProps = {
   filters: { tipo?: "entrada" | "saida"; categoria?: string };
   filterCategories: FormCategory[];
   canDelete: boolean;
+  canAudit: boolean;
   form: Omit<TransactionFormProps, "target" | "onClose">;
   deleteAction: (id: string) => Promise<FormState>;
 };
