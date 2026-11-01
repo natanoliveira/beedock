@@ -1,3 +1,4 @@
+import { BrandMark } from "@/components/atoms/BrandMark";
 import { HexMark } from "@/components/atoms/HexMark";
 import { LegalLinks } from "@/components/molecules/LegalLinks";
 import { cn } from "@/lib/utils";
@@ -30,11 +31,7 @@ export function AuthTemplate({ title, subtitle, eyebrow, footer, children }: Aut
         />
 
         <div className="mt-2 flex items-center gap-2.5">
-          <span aria-hidden className="contents">
-            <HexMark tone="primary" className="h-[41px] w-9 text-sm font-black">
-              BD
-            </HexMark>
-          </span>
+          <BrandMark tone="onDark" className="h-11" />
           <span className="font-heading text-[22px] font-black [font-stretch:125%]">
             Bee<span className="text-primary">Dock</span>
           </span>

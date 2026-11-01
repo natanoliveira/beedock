@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { connection } from "next/server";
-import { HexMark } from "@/components/atoms/HexMark";
+import { BrandMark } from "@/components/atoms/BrandMark";
 import { LegalDocumentView } from "@/components/organisms/LegalDocumentView";
 import { db } from "@/lib/db";
 import type { LegalDocumentType } from "@/generated/prisma/enums";
@@ -14,9 +14,7 @@ export async function PublicLegalPage({ type, title }: { type: LegalDocumentType
     <main className="mx-auto grid min-h-dvh w-full max-w-prose content-start gap-6 px-4 py-8 md:py-12">
       <div className="flex items-center justify-between gap-3">
         <span className="flex items-center gap-2.5">
-          <HexMark tone="primary" className="h-[41px] w-9 text-sm font-black">
-            BD
-          </HexMark>
+          <BrandMark className="h-11" />
           <span className="font-heading text-xl font-black [font-stretch:125%]">
             Bee<span className="text-primary">Dock</span>
           </span>

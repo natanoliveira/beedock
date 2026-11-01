@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { HexMark } from "@/components/atoms/HexMark";
+import { BrandMark } from "@/components/atoms/BrandMark";
 import { OrgSwitcher } from "@/components/organisms/OrgSwitcher";
 import { PlatformNav } from "@/components/organisms/PlatformNav";
 import { LogoutButton } from "@/components/molecules/LogoutButton";
@@ -20,7 +20,7 @@ export default async function PlataformaLayout({ children }: { children: React.R
             href="/plataforma"
             className="flex items-center gap-2.5 rounded outline-none focus-visible:ring-3 focus-visible:ring-white/50"
           >
-            <HexMark tone="primary">BD</HexMark>
+            <BrandMark tone="onDark" className="h-11" />
             <span className="font-heading text-lg font-black [font-stretch:125%]">
               Bee<span className="text-primary">Dock</span>
             </span>

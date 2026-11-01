@@ -16,6 +16,7 @@
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
     "db:seed": "prisma db seed",
+    "db:push": "prisma db push",
     "create-admin": "tsx --env-file-if-exists=.env scripts/create-admin.ts",
     "create-org": "tsx --env-file-if-exists=.env scripts/create-org.ts",
     "audit:verify": "tsx --env-file-if-exists=.env scripts/audit-verify.ts"
