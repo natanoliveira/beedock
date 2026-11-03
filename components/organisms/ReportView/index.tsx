@@ -1,13 +1,13 @@
-import { ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { MoneyText } from "@/components/atoms/MoneyText";
 import { BarList } from "@/components/molecules/BarList";
 import { KpiCard } from "@/components/molecules/KpiCard";
+import { ReportExportButtons } from "@/components/molecules/ReportExportButtons";
 import { cn } from "@/lib/utils";
 import type { ReportViewProps } from "./ReportView.types";
 
 const navBtn = "hover:bg-muted inline-flex size-10 items-center justify-center rounded-md";
-const linkBtn = "hover:bg-muted inline-flex h-10 items-center gap-2 rounded-md border px-3 text-sm font-bold";
 
 export function ReportView({ report: r, month, last6Labels, canExport }: ReportViewProps) {
   const peak = Math.max(1, ...r.last6.flatMap((m) => [m.incomeCents, m.expenseCents]));
@@ -15,16 +15,7 @@ export function ReportView({ report: r, month, last6Labels, canExport }: ReportV
     <div className="grid gap-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-extrabold md:text-3xl">Relatórios</h1>
-        {canExport && (
-          <div className="flex gap-2">
-            <a className={linkBtn} href={`/relatorios/${month.selected}/relatorio.pdf`}>
-              <Download className="size-4" aria-hidden /> PDF
-            </a>
-            <a className={linkBtn} href={`/relatorios/${month.selected}/lancamentos.csv`}>
-              <Download className="size-4" aria-hidden /> CSV
-            </a>
-          </div>
-        )}
+        {canExport && <ReportExportButtons month={month.selected} />}
       </header>
 
       <div className="flex flex-wrap items-center gap-2">

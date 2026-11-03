@@ -68,11 +68,11 @@ export function AppNavigation({ showReports, showAudit, showSettings, showTeam }
   const companyActive = company.some((i) => isActive(pathname, i));
 
   const topLink =
-    "font-heading relative flex h-full items-center gap-2 px-3 text-sm font-bold [font-stretch:100%] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-inset";
+    "font-heading relative flex h-full shrink-0 items-center gap-2 px-2.5 text-sm whitespace-nowrap xl:px-3 font-bold [font-stretch:100%] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-inset";
 
   return (
     <>
-      <nav aria-label="Principal" className="hidden h-full flex-1 gap-1 lg:flex">
+      <nav aria-label="Principal" className="hidden h-full min-w-0 flex-1 gap-0.5 lg:flex xl:gap-1">
         {main.map((item) => {
           const active = isActive(pathname, item);
           const Icon = item.icon;
@@ -83,7 +83,7 @@ export function AppNavigation({ showReports, showAudit, showSettings, showTeam }
               aria-current={active ? "page" : undefined}
               className={cn(topLink, active ? "text-white" : "text-ink-foreground/75 hover:text-white")}
             >
-              <Icon className={cn("size-[18px]", active && "text-primary")} aria-hidden />
+              <Icon className={cn("hidden size-[18px] xl:block", active && "text-primary")} aria-hidden />
               {item.label}
               {active && <span aria-hidden className="bg-primary absolute inset-x-2.5 bottom-0 h-1 rounded-t" />}
             </Link>
