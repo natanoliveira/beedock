@@ -1,11 +1,13 @@
 "use client";
 
 import { usePathname, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 const START_EVENT = "beedock:navigation-start";
 const STOP_EVENT = "beedock:navigation-stop";
 const SAFETY_MS = 15000;
+// os loading.tsx têm esse papel: a URL já mudou, mas o conteúdo real ainda não chegou
+const SKELETON = '[role="status"][aria-busy="true"]';
 
 // destino igual à URL atual não gera navegação: a barra ficaria presa até o SAFETY_MS
 const isSameUrl = (href: string) => {
@@ -37,7 +39,16 @@ function Bar() {
   }, [here]);
   const safety = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const phase: Phase = from === null ? "idle" : from === here ? "loading" : "done";
+  const [skeleton, setSkeleton] = useState(false);
+  useLayoutEffect(() => {
+    const check = () => setSkeleton(document.querySelector(SKELETON) !== null);
+    check();
+    const mo = new MutationObserver(check);
+    mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["aria-busy"] });
+    return () => mo.disconnect();
+  }, [here]);
+
+  const phase: Phase = from === null ? "idle" : from === here || skeleton ? "loading" : "done";
 
   const start = useCallback(() => {
     clearTimeout(safety.current);
@@ -76,21 +87,23 @@ function Bar() {
     };
   }, [start]);
 
+  useEffect(() => {
+    document.documentElement.toggleAttribute("data-nav-loading", phase === "loading");
+  }, [phase]);
+
   return (
     <div
       aria-hidden
-      className="pointer-events-none fixed inset-x-0 top-0 z-[100] h-[3px] origin-left"
+      className="tape pointer-events-none fixed inset-x-0 top-0 z-[100] h-1.5"
       style={{
-        // a faixa zebrada (Mel + Própolis) fica no topo dos headers: barra clara com halo Mel para aparecer sobre ela
-        background: "#fbf6ea",
-        boxShadow: "0 1px 0 rgba(30, 22, 12, 0.55), 0 0 10px 1px rgba(245, 164, 0, 0.9)",
-        opacity: phase === "idle" ? 0 : phase === "done" ? 0 : 1,
-        transform: `scaleX(${phase === "idle" ? 0 : phase === "loading" ? 0.8 : 1})`,
+        // clip-path (não scaleX) para a zebra não deformar; a faixa estática dos headers some enquanto carrega
+        clipPath: `inset(0 ${phase === "idle" ? 100 : phase === "loading" ? 20 : 0}% 0 0)`,
+        opacity: phase === "loading" ? 1 : 0,
         transition:
           phase === "loading"
-            ? "transform 8s cubic-bezier(0.1, 0.6, 0.2, 1)"
+            ? "clip-path 8s cubic-bezier(0.1, 0.6, 0.2, 1)"
             : phase === "done"
-              ? "transform 200ms ease-out, opacity 300ms ease 200ms"
+              ? "clip-path 200ms ease-out, opacity 300ms ease 200ms"
               : "none",
       }}
       data-phase={phase}

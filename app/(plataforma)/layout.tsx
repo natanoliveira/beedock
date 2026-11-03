@@ -14,7 +14,7 @@ export default async function PlataformaLayout({ children }: { children: React.R
   return (
     <div className="min-h-dvh">
       <header className="bg-ink text-ink-foreground">
-        <div aria-hidden className="tape h-1.5" />
+        <div aria-hidden className="tape tape-header h-1.5" />
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-3 gap-y-0 px-4 pt-[max(env(safe-area-inset-top),12px)] pb-3 md:px-8">
           <Link
             href="/plataforma"

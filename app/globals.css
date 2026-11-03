@@ -151,3 +151,7 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+html[data-nav-loading] .tape-header {
+  visibility: hidden;
+}

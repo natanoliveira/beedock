@@ -6,7 +6,7 @@ export function AppShellTemplate({ brand, navigation, account, banner, brandStyl
   return (
     <div style={brandStyle} className="min-h-dvh">
       <header className="bg-ink text-ink-foreground sticky top-0 z-30">
-        <div aria-hidden className="tape h-1.5" />
+        <div aria-hidden className="tape tape-header h-1.5" />
         <div className="mx-auto flex h-16 max-w-[1240px] items-center gap-3 px-4 md:px-8 lg:gap-7">
           {brand}
           <span aria-hidden className="hidden h-7 w-px bg-white/10 lg:block" />
