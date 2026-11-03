@@ -138,7 +138,7 @@
   h2,
   h3 {
     font-family: var(--font-display);
-    font-stretch: 125%;
+    font-stretch: 100%;
     letter-spacing: -0.01em;
   }
 }

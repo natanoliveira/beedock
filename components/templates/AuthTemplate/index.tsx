@@ -32,13 +32,13 @@ export function AuthTemplate({ title, subtitle, eyebrow, footer, children }: Aut
 
         <div className="mt-2 flex items-center gap-2.5">
           <BrandMark tone="onDark" className="h-11" />
-          <span className="font-heading text-[22px] font-black [font-stretch:125%]">
+          <span className="font-heading text-[22px] font-black [font-stretch:100%]">
             Bee<span className="text-primary">Dock</span>
           </span>
         </div>
 
         <div className="hidden max-w-[560px] lg:block">
-          <p className="font-heading mb-4 text-[clamp(32px,3.1vw,46px)] leading-[.98] font-black tracking-tight [font-stretch:125%]">
+          <p className="font-heading mb-4 text-[clamp(32px,3.1vw,46px)] leading-[.98] font-black tracking-tight [font-stretch:100%]">
             Sua estamparia organizada como <span className="text-primary">uma colmeia.</span>
           </p>
           <p className="text-ink-foreground/75 max-w-[36ch] text-[17px]">

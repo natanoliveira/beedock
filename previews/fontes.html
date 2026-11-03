@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BeeDock · preview de fontes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,100..900&family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,200..800&family=Instrument+Sans:wght@400..700&family=Big+Shoulders+Display:wght@600;800;900&family=Barlow:wght@400;500;600;700&family=Young+Serif&family=Public+Sans:wght@400;500;600;700&family=Unbounded:wght@500;700;900&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --mel: #f5a400; --propolis: #1e160c; --strong: #d98b00;
+    --bg: #fbf6ea; --fg: #1e160c; --card: #fffdf7; --muted: #f3ead3; --mfg: #6b5b43; --border: #e6d9ba;
+    --income: #2f7d32; --income-soft: #e3f2df; --expense: #b3261e; --expense-soft: #fbe4e1; --receivable: #2563a8;
+    --font-display: "Archivo", sans-serif; --font-body: "Atkinson Hyperlegible", sans-serif;
+    --display-wdth: 125; --display-wght: 900; --display-track: -.01em; --display-case: none;
+  }
+  [data-theme="dark"] { --bg:#15100a; --fg:#f7eedc; --card:#1f1810; --muted:#2a2116; --mfg:#bca987; --border:#3a2e1d; --income-soft:#1d3320; --expense-soft:#3a1a17; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 400 16px/1.5 var(--font-body); }
+  .display { font-family: var(--font-display); font-weight: var(--display-wght); font-stretch: calc(var(--display-wdth) * 1%); letter-spacing: var(--display-track); text-transform: var(--display-case); }
+  .num { font-family: var(--font-display); font-weight: var(--display-wght); font-variant-numeric: tabular-nums; font-stretch: 100%; }
+  .bar { position: sticky; top: 0; z-index: 5; background: var(--propolis); color: #f7eedc; padding: 12px 20px; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+  .bar b { font-family: "Archivo"; font-weight: 900; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tabs button { font: 700 14px "Archivo", sans-serif; border: 2px solid #6b5b43; background: transparent; color: #f7eedc; padding: 8px 14px; border-radius: 10px; cursor: pointer; }
+  .tabs button[aria-pressed="true"] { background: var(--mel); color: var(--propolis); border-color: var(--mel); }
+  .theme { margin-left: auto; font: 700 14px "Archivo", sans-serif; border: 2px solid #6b5b43; background: transparent; color: #f7eedc; padding: 8px 14px; border-radius: 10px; cursor: pointer; }
+  main { max-width: 1180px; margin: 0 auto; padding: 24px 20px 64px; display: grid; gap: 28px; }
+  .meta { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px 20px; display: grid; gap: 4px; }
+  .meta h2 { margin: 0; font-size: 22px; }
+  .meta p { margin: 0; color: var(--mfg); }
+  .grid2 { display: grid; gap: 20px; grid-template-columns: 1fr; }
+  @media (min-width: 900px) { .grid2 { grid-template-columns: 1fr 1fr; } }
+  .hero { background: var(--propolis); color: #f7eedc; border-radius: 16px; padding: 28px; display: grid; gap: 14px; align-content: start; position: relative; overflow: hidden; }
+  .hero::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 8px; background: repeating-linear-gradient(135deg, var(--mel) 0 14px, var(--propolis) 14px 28px); }
+  .brand { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+  .brand svg { height: 44px; }
+  .brand span { font-size: 26px; }
+  .brand em { font-style: normal; color: var(--mel); }
+  .hero h1 { margin: 0; font-size: clamp(30px, 4vw, 44px); line-height: 1; }
+  .hero h1 em { font-style: normal; color: var(--mel); }
+  .hero p { margin: 0; opacity: .8; max-width: 36ch; font-size: 17px; }
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; display: grid; gap: 14px; align-content: start; }
+  .panel h2 { margin: 0; font-size: 26px; }
+  label { display: grid; gap: 4px; font-weight: 700; font-size: 14px; }
+  input { font: 400 16px var(--font-body); background: var(--bg); color: var(--fg); border: 2px solid var(--border); border-radius: 10px; padding: 12px; }
+  .btn { font: 800 16px var(--font-display); font-stretch: 100%; background: var(--mel); color: var(--propolis); border: 0; border-radius: 10px; padding: 14px 18px; cursor: pointer; }
+  .btn.ghost { background: transparent; color: var(--fg); border: 2px solid var(--border); }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .kpis { display: grid; gap: 12px; grid-template-columns: repeat(2, 1fr); }
+  @media (min-width: 900px) { .kpis { grid-template-columns: repeat(4, 1fr); } }
+  .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+  .kpi small { display: block; font: 800 12px var(--font-display); font-stretch: 100%; letter-spacing: .08em; text-transform: uppercase; }
+  .kpi .num { font-size: 26px; display: block; margin-top: 4px; }
+  .income { color: var(--income); } .expense { color: var(--expense); } .recv { color: var(--receivable); } .profit { color: var(--strong); }
+  table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  th { text-align: left; font: 800 12px var(--font-display); font-stretch: 100%; letter-spacing: .08em; text-transform: uppercase; color: var(--mfg); padding: 12px; background: var(--muted); }
+  td { padding: 12px; border-top: 1px solid var(--border); }
+  td.v { text-align: right; } th.v { text-align: right; }
+  .badge { display: inline-block; font: 700 12px var(--font-body); padding: 2px 10px; border-radius: 99px; }
+  .b-in { background: var(--income-soft); color: var(--income); } .b-out { background: var(--expense-soft); color: var(--expense); } .b-open { background: var(--muted); color: var(--mfg); }
+  .scale { display: grid; gap: 8px; }
+  .scale div { line-height: 1.1; }
+  .sample-note { color: var(--mfg); font-size: 13px; }
+</style>
+</head>
+<body data-theme="light">
+<div class="bar">
+  <b>Fontes · BeeDock</b>
+  <div class="tabs" id="tabs" role="group" aria-label="Combinações de fontes"></div>
+  <button class="theme" id="theme" type="button">Tema escuro</button>
+</div>
+
+<main>
+  <section class="meta" id="meta"></section>
+
+  <section class="grid2">
+    <div class="hero">
+      <div class="brand">
+        <svg viewBox="0 0 111 114" aria-hidden="true"><polygon points="" id="h1" fill="#f5a400"/><polygon points="" id="h2" fill="#f7eedc"/><polygon points="" id="h3" fill="#d98b00"/></svg>
+        <span class="display">Bee<em>Dock</em></span>
+      </div>
+      <h1 class="display">Sua estamparia organizada como <em>uma colmeia.</em></h1>
+      <p>Pedidos, entradas e saídas no mesmo lugar, do balcão ao celular.</p>
+    </div>
+    <div class="panel">
+      <h2 class="display">Entrar</h2>
+      <label>E-mail<input value="maria@estampa.com.br"></label>
+      <label>Senha<input type="password" value="senha-secreta"></label>
+      <div class="row"><button class="btn" type="button">Entrar</button><button class="btn ghost" type="button">Esqueci a senha</button></div>
+      <p class="sample-note">Texto de apoio no corpo: confira legibilidade em tamanho pequeno, acentuação (ã, ç, é) e números como 1.234,56.</p>
+    </div>
+  </section>
+
+  <section class="kpis" aria-label="Resumo">
+    <div class="kpi income"><small>Entradas</small><span class="num">R$ 12.480,00</span></div>
+    <div class="kpi expense"><small>Saídas</small><span class="num">R$ 7.915,40</span></div>
+    <div class="kpi profit"><small>Lucro</small><span class="num">R$ 4.564,60</span></div>
+    <div class="kpi recv"><small>A receber hoje</small><span class="num">R$ 3.200,00</span></div>
+  </section>
+
+  <section>
+    <table>
+      <thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th class="v">Valor</th></tr></thead>
+      <tbody>
+        <tr><td>05/11</td><td>Sinal: 20 camisas time Unidos</td><td><span class="badge b-in">Pedidos</span></td><td class="v num income">R$ 600,00</td></tr>
+        <tr><td>04/11</td><td>Tinta plastisol branca 5 kg</td><td><span class="badge b-out">Insumos</span></td><td class="v num expense">− R$ 289,90</td></tr>
+        <tr><td>03/11</td><td>Pedido #42: caneca personalizada</td><td><span class="badge b-open">Em andamento</span></td><td class="v num">R$ 1.250,00</td></tr>
+        <tr><td>02/11</td><td>Estorno: pedido cancelado #38</td><td><span class="badge b-out">Estorno</span></td><td class="v num expense">− R$ 150,00</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="panel">
+    <div class="scale">
+      <div class="display" style="font-size:44px">Relatório de Novembro</div>
+      <div class="display" style="font-size:30px">Auditoria da empresa</div>
+      <div class="display" style="font-size:22px">Pedidos com prazo e sinal à vista</div>
+      <div style="font-size:18px">Corpo 18: cada alteração fica registrada na auditoria, com quem fez e quando.</div>
+      <div style="font-size:16px">Corpo 16: o Funcionário nunca acessa relatórios, lucro ou histórico. ÁÉÍÓÚ àèìòù ãõ ç.</div>
+      <div style="font-size:14px" class="sample-note">Corpo 14: 0123456789 · R$ 1.234,56 · 05/11/2026 · #42</div>
+    </div>
+  </section>
+</main>
+
+<script>
+const PAIRS = [
+  { id: "atual", name: "Atual", display: "Archivo", body: "Atkinson Hyperlegible", fd: '"Archivo"', fb: '"Atkinson Hyperlegible"', wdth: 125, wght: 900, track: "-.01em", cap: "none",
+    why: "Archivo expandida e pesada, com cara de doca/industrial. Atkinson foi desenhada para legibilidade máxima." },
+  { id: "bricolage", name: "Bricolage + Instrument", display: "Bricolage Grotesque", body: "Instrument Sans", fd: '"Bricolage Grotesque"', fb: '"Instrument Sans"', wdth: 100, wght: 800, track: "-.02em", cap: "none",
+    why: "Grotesca com personalidade e leve irregularidade de oficina; Instrument Sans é limpa e moderna. Mais calor, menos 'sistema'." },
+  { id: "shoulders", name: "Big Shoulders + Barlow", display: "Big Shoulders Display", body: "Barlow", fd: '"Big Shoulders Display"', fb: '"Barlow"', wdth: 100, wght: 900, track: "0", cap: "uppercase",
+    why: "Condensada alta, inspirada em sinalização industrial de Chicago. Combina com doca de carga e faixa zebrada; Barlow tem a mesma origem de placa viária." },
+  { id: "fraunces", name: "Young Serif + Public Sans", display: "Young Serif", body: "Public Sans", fd: '"Young Serif"', fb: '"Public Sans"', wdth: 100, wght: 400, track: "0", cap: "none",
+    why: "Serifada robusta de peso único, com ar de cartaz de oficina gráfica e mais acolhedora; Public Sans é neutra para dados. Destoa dos apps de gestão comuns." },
+  { id: "unbounded", name: "Unbounded + Manrope", display: "Unbounded", body: "Manrope", fd: '"Unbounded"', fb: '"Manrope"', wdth: 100, wght: 700, track: "-.01em", cap: "none",
+    why: "Larga e arredondada, mais moderna e tecnológica. Manrope é geométrica e muito legível em tabela. Cuidado: Unbounded ocupa bastante largura em celular." }
+];
+const root = document.documentElement.style;
+const tabs = document.getElementById("tabs");
+const meta = document.getElementById("meta");
+
+function hexPoints(cx, cy, r) {
+  return Array.from({ length: 6 }, (_, k) => { const a = (90 + 60 * k) * Math.PI / 180; return (cx + r * Math.cos(a)).toFixed(2) + "," + (cy - r * Math.sin(a)).toFixed(2); }).join(" ");
+}
+const R = 30, r = 27, W = Math.sqrt(3) * R;
+document.getElementById("h1").setAttribute("points", hexPoints(55.5 - W / 2, 36, r));
+document.getElementById("h2").setAttribute("points", hexPoints(55.5 + W / 2, 36, r));
+document.getElementById("h3").setAttribute("points", hexPoints(55.5, 36 + 1.5 * R, r));
+
+function apply(p) {
+  root.setProperty("--font-display", p.fd + ", sans-serif");
+  root.setProperty("--font-body", p.fb + ", sans-serif");
+  root.setProperty("--display-wdth", p.wdth);
+  root.setProperty("--display-wght", p.wght);
+  root.setProperty("--display-track", p.track);
+  root.setProperty("--display-case", p.cap);
+  meta.innerHTML = "<h2 class='display'>" + p.name + "</h2><p><b>Títulos e números:</b> " + p.display + " · <b>Corpo:</b> " + p.body + "</p><p>" + p.why + "</p>";
+  [...tabs.children].forEach(b => b.setAttribute("aria-pressed", String(b.dataset.id === p.id)));
+  history.replaceState(null, "", "#" + p.id);
+}
+PAIRS.forEach(p => {
+  const b = document.createElement("button");
+  b.type = "button"; b.textContent = p.name; b.dataset.id = p.id;
+  b.onclick = () => apply(p);
+  tabs.appendChild(b);
+});
+apply(PAIRS.find(p => "#" + p.id === location.hash) || PAIRS[0]);
+
+document.getElementById("theme").onclick = (e) => {
+  const dark = document.body.dataset.theme !== "dark";
+  document.body.dataset.theme = dark ? "dark" : "light";
+  document.documentElement.dataset.theme = dark ? "dark" : "light";
+  e.target.textContent = dark ? "Tema claro" : "Tema escuro";
+};
+</script>
+</body>
+</html>

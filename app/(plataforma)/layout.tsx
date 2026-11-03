@@ -21,7 +21,7 @@ export default async function PlataformaLayout({ children }: { children: React.R
             className="flex items-center gap-2.5 rounded outline-none focus-visible:ring-3 focus-visible:ring-white/50"
           >
             <BrandMark tone="onDark" className="h-11" />
-            <span className="font-heading text-lg font-black [font-stretch:125%]">
+            <span className="font-heading text-lg font-black [font-stretch:100%]">
               Bee<span className="text-primary">Dock</span>
             </span>
           </Link>

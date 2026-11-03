@@ -15,7 +15,7 @@ export async function PublicLegalPage({ type, title }: { type: LegalDocumentType
       <div className="flex items-center justify-between gap-3">
         <span className="flex items-center gap-2.5">
           <BrandMark className="h-11" />
-          <span className="font-heading text-xl font-black [font-stretch:125%]">
+          <span className="font-heading text-xl font-black [font-stretch:100%]">
             Bee<span className="text-primary">Dock</span>
           </span>
         </span>

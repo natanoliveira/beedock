@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Archivo, Atkinson_Hyperlegible } from "next/font/google";
+import { Bricolage_Grotesque, Instrument_Sans } from "next/font/google";
 import { AppToaster } from "@/components/atoms/AppToaster";
 import { NavigationProgress } from "@/components/atoms/NavigationProgress";
 import "./globals.css";
 
-const display = Archivo({ subsets: ["latin"], axes: ["wdth"], variable: "--font-display" });
-const body = Atkinson_Hyperlegible({ subsets: ["latin"], weight: ["400", "700"], variable: "--font-body" });
+const display = Bricolage_Grotesque({ subsets: ["latin"], axes: ["wdth", "opsz"], variable: "--font-display" });
+const body = Instrument_Sans({ subsets: ["latin"], variable: "--font-body" });
 
 export const metadata: Metadata = {
   title: { default: "BeeDock", template: "%s · BeeDock" },
