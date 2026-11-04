@@ -4,6 +4,7 @@ import { OrgAccount } from "@/components/organisms/OrgAccount";
 import { MasterBanner } from "@/components/organisms/MasterBanner";
 import { OrgHeader } from "@/components/organisms/OrgHeader";
 import { OrgSwitcher } from "@/components/organisms/OrgSwitcher";
+import { InstallBanner } from "@/components/molecules/InstallBanner";
 import { AppShellTemplate } from "@/components/templates/AppShellTemplate";
 import { logoutAction } from "@/features/auth/actions";
 import { leaveOrganizationAction, switchOrganizationAction } from "@/features/members/actions";
@@ -54,6 +55,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       }
     >
       {children}
+      <InstallBanner />
     </AppShellTemplate>
   );
 }
