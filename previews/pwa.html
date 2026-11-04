@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PWA — preview</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:#f4efe6;color:#1e160c;padding:24px}
+h1{font-size:20px;margin:0 0 4px}p.s{margin:0 0 20px;color:#6b5d4a;font-size:14px}
+nav{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+nav button{border:1px solid #1e160c;background:#fff;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:14px}
+nav button.on{background:#1e160c;color:#f5a400}
+.phone{width:300px;height:560px;border:8px solid #1e160c;border-radius:36px;overflow:hidden;position:relative;margin:0 auto 12px}
+section{display:none}section.on{display:block}
+.home{background:linear-gradient(#3b4f6b,#1f2a3b);height:100%;padding:48px 20px;display:grid;grid-template-columns:repeat(4,1fr);gap:18px;align-content:start}
+.app{text-align:center;color:#fff;font-size:11px}.app i{display:block;width:52px;height:52px;border-radius:12px;margin:0 auto 4px;background:#ffffff33}
+.app img{width:52px;height:52px;border-radius:12px;display:block;margin:0 auto 4px}
+.app img.mask{border-radius:50%}
+.bar{background:#1e160c;color:#f5a400;height:28px;font-size:11px;display:flex;align-items:center;padding:0 14px;justify-content:space-between}
+.body{padding:16px;height:calc(100% - 28px);background:#fffaf0}
+.off{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:0 24px;height:100%}
+.off h2{font-family:system-ui;font-size:22px;margin:0}.off p{color:#6b5d4a;font-size:14px;margin:0}
+.btn{background:#f5a400;color:#1e160c;padding:10px 16px;border-radius:8px;font-weight:600;font-size:14px;text-decoration:none}
+.kpi{background:#fff;border:1px solid #e6dcc8;border-radius:10px;padding:12px;margin-bottom:10px;font-size:13px}.kpi b{display:block;font-size:20px}
+.row{display:flex;gap:24px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+figcaption{text-align:center;font-size:12px;color:#6b5d4a}
+</style></head><body>
+<h1>PWA — telas</h1><p class="s">Ícone, abertura standalone no Início, offline. Dados são ilustrativos.</p>
+<nav><button class="on" data-t="a">1. Tela inicial do celular</button><button data-t="b">2. App aberto (Início)</button><button data-t="c">3. Sem conexão</button><button data-t="d">4. Ícones</button></nav>
+
+<section id="a" class="on"><div class="phone"><div class="home">
+<div class="app"><i></i>Fotos</div><div class="app"><i></i>Mapas</div><div class="app"><i></i>Relógio</div><div class="app"><i></i>Notas</div>
+<div class="app"><img src="pwa/icon-192.png" alt="">BeeDock</div><div class="app"><i></i>Banco</div></div></div>
+<p class="s" style="text-align:center">Ícone “BeeDock” após Adicionar à Tela de Início.</p></section>
+
+<section id="b"><div class="phone"><div class="bar"><span>9:41</span><span>●●●</span></div><div class="body">
+<b>Início</b><div class="kpi" style="margin-top:12px">A receber (hoje)<b>R$ 1.250,00</b></div><div class="kpi">Próximas entregas<b>3 pedidos</b></div></div></div>
+<p class="s" style="text-align:center">Sem barra do navegador (display: standalone); abre em /inicio.</p></section>
+
+<section id="c"><div class="phone"><div class="bar"><span>9:41</span><span>sem rede</span></div><div class="body"><div class="off">
+<h2>Sem conexão</h2><p>O BeeDock precisa de internet para mostrar e salvar seus dados. Verifique a conexão e tente de novo.</p><a class="btn" href="#">Tentar de novo</a></div></div></div>
+<p class="s" style="text-align:center">Exibida só quando uma navegação falha por falta de rede.</p></section>
+
+<section id="d"><div class="row">
+<figure><img src="pwa/icon-192.png" width="96"><figcaption>192</figcaption></figure>
+<figure><img src="pwa/icon-512.png" width="96"><figcaption>512</figcaption></figure>
+<figure><img src="pwa/maskable-512.png" width="96" style="border-radius:50%"><figcaption>maskable (recorte circular)</figcaption></figure></div></section>
+<script>document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll("nav button,section").forEach(e=>e.classList.remove("on"));b.classList.add("on");document.getElementById(b.dataset.t).classList.add("on")})</script>
+</body></html>
