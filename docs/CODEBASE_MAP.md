@@ -1,6 +1,6 @@
 ---
-last_mapped: 2026-10-23T02:51:35Z
-total_files: 369
+last_mapped: 2026-11-04T00:38:08Z
+total_files: 487
 total_tokens: 425098
 ---
 
@@ -46,11 +46,14 @@ app/                     rotas (App Router)
   (public)/              termos, privacidade — públicas, dinâmicas (`await connection()`), mostram a versão vigente ou "Documento ainda não publicado."
   (app)/                 área da empresa — layout chama requireTenant()
     inicio/ lancamentos/ (+[id]/comprovante, [id]/recibo.pdf route handlers)
-    configuracoes/ (empresa=ADMIN, categorias, formas-de-pagamento, tipos-de-produto, equipe=ADMIN, auditoria=placeholder)
+    configuracoes/ (empresa=ADMIN, categorias, formas-de-pagamento, tipos-de-produto, equipe=ADMIN, auditoria, exportar (LGPD JSON))
     clientes/ (+[id]) pedidos/ (+[id], [id]/recibo.pdf route handler)   Fase 4
-    relatorios/   placeholder (Fase 5)
+    relatorios/ (+[mes]/relatorio.pdf, lancamentos.csv route handlers)   Fase 5
   (plataforma)/plataforma/  painel MASTER — layout chama requireMaster(); empresas/, usuarios/ (+[id]), termos/ (publicar Termos/Privacidade, versão vigente e nº de aceites)
   api/auth/[...nextauth]/   único API route
+  manifest.ts            PWA: `start_url /inicio`, standalone, ícones 192/512/maskable
+  offline/               página pública estática "Sem conexão" (fallback do service worker)
+public/                  `sw.js` (service worker), `icons/` (PWA), `brand/` (logos)
 features/                domínio (sem importar components/app — lint)
   auth/ platform/ members/ transactions/ customers/ orders/ catalog/ organizations/ (service, logo, actions, schemas, defaults) legal/ (service, rules, schemas, templates, actions) shared/
 lib/                     infraestrutura (db, tenant, audit, auth, session, permissions, env, logger…)
@@ -110,8 +113,8 @@ prompt-beedock.md        spec original do produto
 | page (app) | ui |
 | feature | components/*, app |
 
-- **atoms**: `AppButton` (cva tone/size, ≥44px), aliases `AppDialog/AppDrawer/AppSheet/AppDropdownMenu`, `AppInput/Label/Skeleton/Toaster/Select` (native), `HexMark`, `MoneyText` (`formatCents`), `StatusBadge`, `OrgStatusBadge`, `NavigationProgress` (+`startNavigationProgress()`/`stopNavigationProgress()`).
-- **molecules**: `ConfirmAction` (Dialog/Drawer + motivo), `EmptyState`, `AdminOnlyNotice`, `FormField`, `KpiCard`, `MoneyInput`, `LogoDropzone` (crop WebP), `LogoutButton`, `ReceiptActions`, `InviteLink` (link de convite + copiar), `EnterOrgButton` (MASTER entra na empresa).
+- **atoms**: `AppButton` (cva tone/size, ≥44px), aliases `AppDialog/AppDrawer/AppSheet/AppDropdownMenu`, `AppInput/Label/Skeleton/Toaster/Select` (native), `HexMark`, `BrandMark`, `ServiceWorkerRegister` (registra `/sw.js` só em produção), `MoneyText` (`formatCents`), `StatusBadge`, `OrgStatusBadge`, `NavigationProgress` (+`startNavigationProgress()`/`stopNavigationProgress()`).
+- **molecules**: `ConfirmAction` (Dialog/Drawer + motivo), `EmptyState`, `AdminOnlyNotice`, `FormField`, `KpiCard`, `MoneyInput`, `LogoDropzone` (crop WebP), `LogoutButton`, `ReceiptActions`, `InviteLink` (link de convite + copiar), `EnterOrgButton` (MASTER entra na empresa), `ReportExportButtons` (PDF/CSV via fetch + spinner), `InstallBanner` (convite de instalação só no celular: `beforeinstallprompt` no Android, passo a passo no iOS; dispensa 30 dias em `localStorage`; montado em `app/(app)/layout.tsx`).
 - **organisms**: `TransactionForm` (~4.6k tok), `TransactionList` (+RowActions), `OrganizationForm` (+`values.ts` testado), `AppNavigation` (menu Empresa ▸ Equipe só ADMIN; `OrgSwitcher` no topo), `OrgSwitcher` (dropdown "Trocar empresa", busca local > 8 opções), `MasterBanner` ("Você está como MASTER…" + Voltar à plataforma), `TeamManager` (equipe + convites, Dialog/Drawer; reusado em `/configuracoes/equipe` e na empresa do MASTER), `UserList` e `UserMemberships` (`/plataforma/usuarios` e detalhe), `PlatformNav`, `CatalogTable`, `OrganizationList`, `LoginForm`, `AcceptInviteForm` (senha nova ou senha atual), `OrgHeader`, `LegalDocumentView` (`heading` h1 nas páginas públicas, h2 no aceite), `TermsAcceptForm` (aceite em `/aceite`), `LegalPublisher` (MASTER publica versão), `OrganizationForm mode="tenant"` (Empresa pelo Admin, sem slug), molecule `LegalLinks`, `LogoDropzone.removeAction`, `OrgAccount`, `QuickActions`.
 - **Fase 4 (clientes/pedidos)**: organisms `CustomerList` (busca/aba "Para revisar" só Admin via URL), `CustomerDetail`, `CustomerForm`, `CustomerAnonymize` (motivo ≥10), `OrderList` (abas de situação + busca + tipo na URL), `OrderDetail`, `OrderForm` (cliente existente ou novo, sinal recolhível), `PaymentForm`, `CancelOrderDialog` (estorno só se há recebido), `UpcomingDeliveries` (server-safe; exporta `OverdueBadge`/`DeliveryItem`), `QuickActions` (+Entrada/+Saída/+Pedido), `TransactionList` (+`OrderTag`, `RowActions` troca Editar/Excluir por link ao pedido); molecules `SearchBox` (debounce 300ms escreve `?q=`, URL é a fonte da verdade, zera a página; `keep` precisa listar os outros filtros) e `ReceiptActions` (props `url`/`filename`; cada clique gera o PDF e audita); `CatalogTable kind="productType"` (flag `masculine`).
 - **Padrão "corpo remonta por sessão"**: `CustomerForm`, `OrderForm`, `CatalogFormDialog` guardam `{target,last,session}` e usam `key={session}` no corpo (estado e `useActionState` limpos a cada abertura); `PaymentForm` usa `key={JSON.stringify(target)}`; `CustomerAnonymize`/`CancelOrderDialog` montam o corpo só com `open`. `FormState` está duplicado em `CustomerForm` e `OrderForm` (tipos idênticos).
@@ -223,7 +226,7 @@ Publicar versão (MASTER, `/plataforma/termos`) cria `LegalDocument` + `platform
 - **Testes de integração rodam no MESMO banco do dev** (`TEST_DATABASE_URL`=`DATABASE_URL`): ids escalares nas limpezas de `afterAll` começam como `""`, nunca `undefined` — `where: { x: undefined }` no Prisma remove o filtro e apaga a tabela inteira.
 - Testes de integração pulam silenciosamente sem `TEST_DATABASE_URL`/`TEST_DIRECT_URL`; ambiente vitest `node` (sem DOM).
 - Lançamento com `orderId` não é editável nem excluível por `updateTransaction`/`deleteTransaction` (`RuleError`); a tela de Lançamentos mostra o selo "Pedido #N" e leva ao pedido. `RuleError` (features/platform/errors.ts) vira erro de formulário em `toFormState`.
-- `AppNavigation` linka Relatórios (placeholder, Fase 5).
+- **PWA** (`public/sw.js`): guarda só `/offline` + `/_next/static/*` (pré-cache lê os assets do HTML de `/offline` no install); só intercepta GET da mesma origem (navegação cai em `/offline` sem rede); nunca guarda HTML nem dado autenticado. Mudou a página offline → troque `VERSION`. `/sw.js` sai com `Cache-Control: no-cache` (`next.config.ts`). Registra só em produção. Fallback offline ainda não validado em navegador.
 - `pnpm audit:verify` reporta 5 eventos legados (SHA-256, seq 1–5 de uma empresa antiga do dev): conhecidos, ficam; decisão de limpar segue em aberto.
 - Dark mode só via `prefers-color-scheme`.
 - Node ≥22.12 obrigatório (Neon WebSocket falha em 20). Porta dev 3004.
@@ -241,6 +244,7 @@ Publicar versão (MASTER, `/plataforma/termos`) cria `LegalDocument` + `platform
 
 ## Navigation Guide
 
+- **PWA** (instalação/offline): `app/manifest.ts`, `public/sw.js`, `app/offline/page.tsx`, `components/atoms/ServiceWorkerRegister.tsx`, `components/molecules/InstallBanner`; ícones em `public/icons/`.
 - **Nova tela da empresa**: `app/(app)/<rota>/page.tsx` (+`loading.tsx`) chamando `requireTenant()`; link em `components/organisms/AppNavigation`; permissão em `lib/permissions.ts`.
 - **Nova escrita**: schema em `features/<x>/schemas.ts` → service com `authorize` + `withAudit` → action fina com `toFormState` → organism recebe action por prop → teste em `tests/<x>.test.ts`.
 - **Novo model tenant**: `prisma/schema.prisma` + migration com policy RLS e FK composta + adicionar em `lib/tenant.ts` `TENANT_MODELS`.
