@@ -168,14 +168,29 @@ export async function linkUser(actor: PlatformActor, input: LinkUserInput): Prom
   });
 }
 
+const RESEND_COOLDOWN_MS = 60 * 1000;
+
+/** Segura reenvio em rajada (cota do e-mail): convite aberto do mesmo e-mail criado há menos de 1 min. Só com `cooldown: true` (actions), depois da checagem de permissão. */
+async function assertInviteCooldown(organizationId: string, email: string): Promise<void> {
+  const recent = await withScope({ organizationId }, (tx) =>
+    tx.invitation.findFirst({
+      where: { organizationId, email, acceptedAt: null, revokedAt: null, createdAt: { gt: new Date(Date.now() - RESEND_COOLDOWN_MS) } },
+      select: { id: true },
+    }),
+  );
+  if (recent) throw new FieldError("email", "Aguarde 1 minuto para gerar outro convite para este e-mail.");
+}
+
 export async function inviteMember(
   actor: MemberActor,
   organizationId: string,
   input: MemberInviteInput,
-): Promise<{ inviteUrl: string }> {
+  opts: { cooldown?: boolean } = {},
+): Promise<{ inviteUrl: string; invitationId: string }> {
   await assertCanManage(actor, organizationId, "invitation.create");
+  if (opts.cooldown) await assertInviteCooldown(organizationId, input.email);
   // não consulta User: a resposta é a mesma para e-mail novo ou com conta (anti-enumeração)
-  const inviteUrl = await withScope({ organizationId }, async (tx) => {
+  const invite = await withScope({ organizationId }, async (tx) => {
     const member = await tx.membership.findFirst({
       where: { active: true, user: { email: input.email } },
       select: { id: true },
@@ -183,7 +198,7 @@ export async function inviteMember(
     if (member) throw new FieldError("email", ALREADY_MEMBER);
     return issueInvite(tx, actor, organizationId, input);
   });
-  return { inviteUrl };
+  return { inviteUrl: invite.url, invitationId: invite.id };
 }
 
 export async function revokeInvitation(actor: MemberActor, organizationId: string, invitationId: string): Promise<void> {

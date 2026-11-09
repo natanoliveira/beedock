@@ -84,7 +84,7 @@ export async function issueInvite(
   actor: Actor,
   organizationId: string,
   invite: MemberInviteInput,
-): Promise<string> {
+): Promise<{ url: string; id: string }> {
   const token = randomBytes(32).toString("base64url");
   const tokenHash = hashToken(token);
   await tx.invitation.updateMany({
@@ -112,14 +112,14 @@ export async function issueInvite(
       after: { name: invite.name, email: invite.email, role: invite.role },
     },
   );
-  return `${env.AUTH_URL}/convite/${token}`;
+  return { url: `${env.AUTH_URL}/convite/${token}`, id: created.id };
 }
 
 export async function createOrganization(
   actor: PlatformActor,
   org: OrganizationInput,
   admin: AdminInviteInput,
-): Promise<{ organizationId: string; inviteUrl: string | null }> {
+): Promise<{ organizationId: string; inviteUrl: string | null; invitationId: string | null }> {
   await assertMaster(actor, "platform.organization_create");
 
   if (await db.organization.findUnique({ where: { slug: org.slug }, select: { id: true } })) {
@@ -128,7 +128,7 @@ export async function createOrganization(
 
   const organizationId = randomUUID();
   const orgActor = { ...actor, organizationId };
-  const inviteUrl = await mapUnique("slug", () =>
+  const invite = await mapUnique("slug", () =>
     withScope({ organizationId }, async (tx) => {
       await tx.organization.create({ data: { id: organizationId, slug: org.slug, ...orgData(org) } });
       await seedOrganizationDefaults(tx, organizationId, settingsData(org.settings));
@@ -152,7 +152,7 @@ export async function createOrganization(
       return null;
     }),
   );
-  return { organizationId, inviteUrl };
+  return { organizationId, inviteUrl: invite?.url ?? null, invitationId: invite?.id ?? null };
 }
 
 /** Grava empresa + settings e devolve o diff para a auditoria (e se o tempo de inatividade mudou). */

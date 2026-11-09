@@ -13,7 +13,7 @@ export type TeamMember = {
 
 export type TeamInvite = { id: string; name: string; email: string; phone: string | null; role: Role; expiresAt: Date };
 
-export type InviteState = FormState & { inviteUrl?: string };
+export type InviteState = FormState & { inviteUrl?: string; emailStatus?: "sent" | "skipped" | "failed" };
 
 export type TeamManagerProps = {
   members: TeamMember[];

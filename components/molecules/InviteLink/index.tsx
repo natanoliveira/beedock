@@ -7,7 +7,7 @@ import { AppButton } from "@/components/atoms/AppButton";
 import type { InviteLinkProps } from "./InviteLink.types";
 
 /** Link de convite mostrado uma vez: copiar e enviar pelo WhatsApp. */
-export function InviteLink({ url, phone }: InviteLinkProps) {
+export function InviteLink({ url, phone, emailStatus, emailTo }: InviteLinkProps) {
   const [copied, setCopied] = useState(false);
   const digits = (phone ?? "").replace(/\D/g, "");
   const whatsapp = digits
@@ -28,6 +28,8 @@ export function InviteLink({ url, phone }: InviteLinkProps) {
   return (
     <div className="bg-warning-soft grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3 rounded-lg p-3">
       <p className="text-warning text-sm font-bold">Copie agora: este link aparece só desta vez. Vale por 48 horas.</p>
+      {emailStatus === "sent" && <p className="text-income text-sm font-bold">Convite enviado por e-mail{emailTo ? ` para ${emailTo}` : ""}.</p>}
+      {emailStatus === "failed" && <p className="text-expense text-sm font-bold">E-mail não enviado. Copie o link e envie manualmente.</p>}
       <input
         readOnly
         aria-label="Link de convite"

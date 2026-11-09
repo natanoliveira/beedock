@@ -21,6 +21,8 @@ import { ForbiddenError } from "@/lib/permissions";
 import { requestMeta } from "@/lib/request";
 import { requireAcceptedSession, requireTenant } from "@/lib/session";
 import { platformActor } from "@/features/platform/actor";
+import { sendInviteEmail } from "@/features/platform/invite-mail";
+import type { MailStatus } from "@/lib/mail";
 import { findUserByEmail } from "@/features/platform/users";
 import {
   changeMemberRole,
@@ -36,7 +38,7 @@ import { linkUserSchema, memberInviteSchema, roleSchema } from "./schemas";
 const NOT_FOUND = "Este registro não existe mais. Atualize a página.";
 const idSchema = z.string().min(1);
 
-type MemberResult = FormState & { inviteUrl?: string };
+type MemberResult = FormState & { inviteUrl?: string; emailStatus?: MailStatus };
 
 async function memberActor(organizationId: string | null): Promise<{ actor: MemberActor; organizationId: string }> {
   if (organizationId === null) {
@@ -71,9 +73,11 @@ export async function inviteMemberAction(organizationId: string | null, _prev: M
   const values = plainValues(fd);
   try {
     const { actor, organizationId: orgId } = await memberActor(organizationId);
-    const { inviteUrl } = await inviteMember(actor, orgId, memberInviteSchema.parse(values));
+    const input = memberInviteSchema.parse(values);
+    const { inviteUrl, invitationId } = await inviteMember(actor, orgId, input, { cooldown: true });
     revalidateTeam(orgId);
-    return { ok: true, inviteUrl };
+    const emailStatus = await sendInviteEmail(actor, orgId, { id: invitationId, url: inviteUrl, ...input });
+    return { ok: true, inviteUrl, emailStatus };
   } catch (e) {
     return toFormState(e, NOT_FOUND, values);
   }

@@ -89,6 +89,7 @@ const PHRASES: Record<string, (e: DescribableEvent) => string> = {
   "member.reactivate": () => "reativou um membro",
   "invitation.create": () => "enviou um convite",
   "invitation.revoke": () => "revogou um convite",
+  "invitation.email": () => "enviou o convite por e-mail",
   "invitation.accept": () => "aceitou um convite",
   "invitation.invalid": () => "usou um link de convite inválido",
   "report.export": () => "exportou um relatório",

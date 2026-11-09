@@ -11,7 +11,7 @@ import { formatDateTime } from "@/lib/format-date";
 import { cn } from "@/lib/utils";
 import { InviteForm, LinkForm } from "./MemberForms";
 import { ResponsiveModal } from "./ResponsiveModal";
-import type { TeamInvite, TeamManagerProps, TeamMember } from "./TeamManager.types";
+import type { InviteState, TeamInvite, TeamManagerProps, TeamMember } from "./TeamManager.types";
 
 const ROLE = { ADMIN: "Admin", FUNCIONARIO: "Funcionário" } as const;
 const OTHER_ROLE = { ADMIN: "FUNCIONARIO", FUNCIONARIO: "ADMIN" } as const;
@@ -45,7 +45,7 @@ export function TeamManager({
   const [flash, setFlash] = useState(flashUrl ?? null);
   const [inviting, setInviting] = useState(false);
   const [linking, setLinking] = useState(false);
-  const [regen, setRegen] = useState<{ url: string; phone: string | null } | null>(null);
+  const [regen, setRegen] = useState<{ url: string; phone: string | null; emailStatus?: InviteState["emailStatus"]; emailTo?: string } | null>(null);
   const [regenPending, startRegen] = useTransition();
 
   useEffect(() => {
@@ -61,7 +61,7 @@ export function TeamManager({
       if (i.phone) fd.set("phone", i.phone);
       const r = await inviteAction({}, fd);
       if (r.ok && r.inviteUrl) {
-        setRegen({ url: r.inviteUrl, phone: i.phone });
+        setRegen({ url: r.inviteUrl, phone: i.phone, emailStatus: r.emailStatus, emailTo: i.email });
         toast.success("Convite gerado.");
       } else {
         toast.error(r.error ?? Object.values(r.fieldErrors ?? {})[0] ?? "Não foi possível gerar o convite.");
@@ -243,7 +243,7 @@ export function TeamManager({
       <ResponsiveModal open={!!regen} onOpenChange={(o) => !o && setRegen(null)} title="Novo link de convite" description="O link anterior foi revogado.">
         {regen && (
           <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
-            <InviteLink url={regen.url} phone={regen.phone} />
+            <InviteLink url={regen.url} phone={regen.phone} emailStatus={regen.emailStatus} emailTo={regen.emailTo} />
             <div className="flex md:justify-end">
               <AppButton type="button" tone="outline" onClick={() => setRegen(null)}>
                 Concluir

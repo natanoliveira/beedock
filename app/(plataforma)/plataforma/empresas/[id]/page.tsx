@@ -32,10 +32,10 @@ export default async function EmpresaPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ vinculado?: string }>;
+  searchParams: Promise<{ vinculado?: string; email?: string }>;
 }) {
   const { id } = await params;
-  const { vinculado } = await searchParams;
+  const { vinculado, email } = await searchParams;
   const session = await requireMaster();
   const actor = await platformActor();
   const org = await getOrganization(actor, id);
@@ -73,6 +73,16 @@ export default async function EmpresaPage({
       {vinculado === "1" && (
         <p role="status" className="bg-warning-soft text-warning rounded-lg px-3 py-2.5 text-sm font-bold">
           Usuário já cadastrado: vinculado como Admin.
+        </p>
+      )}
+      {email === "sent" && (
+        <p role="status" className="bg-income-soft text-income rounded-lg px-3 py-2.5 text-sm font-bold">
+          Convite enviado por e-mail.
+        </p>
+      )}
+      {email === "failed" && (
+        <p role="status" className="bg-warning-soft text-warning rounded-lg px-3 py-2.5 text-sm font-bold">
+          E-mail não enviado: copie o link abaixo e envie manualmente.
         </p>
       )}
       {suspended && (

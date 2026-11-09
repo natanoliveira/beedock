@@ -42,13 +42,13 @@ export function InviteForm({ action, onClose }: { action: TeamManagerProps["invi
   const [state, formAction, pending] = useActionState(async (prev: InviteState, fd: FormData) => {
     const r = await action(prev, fd);
     if (r.ok && r.inviteUrl) toast.success("Convite gerado.");
-    return r.ok ? { ...r, values: { phone: String(fd.get("phone") ?? "") } } : r;
+    return r.ok ? { ...r, values: { phone: String(fd.get("phone") ?? ""), email: String(fd.get("email") ?? "") } } : r;
   }, {});
 
   if (state.ok && state.inviteUrl) {
     return (
       <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
-        <InviteLink url={state.inviteUrl} phone={String(state.values?.phone ?? "") || null} />
+        <InviteLink url={state.inviteUrl} phone={String(state.values?.phone ?? "") || null} emailStatus={state.emailStatus} emailTo={String(state.values?.email ?? "")} />
         <div className="flex md:justify-end">
           <AppButton type="button" tone="outline" onClick={onClose}>
             Concluir

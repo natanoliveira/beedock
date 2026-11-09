@@ -17,6 +17,7 @@ import { ForbiddenError } from "@/lib/permissions";
 import { requestMeta } from "@/lib/request";
 import { platformActor } from "./actor";
 import { INVITE_FLASH } from "./invite-flash";
+import { sendInviteEmail } from "./invite-mail";
 import { FieldError } from "./errors";
 import { acceptInvitation } from "./invitations";
 import { acceptExistingInviteSchema, acceptInviteSchema, adminInviteSchema, formDataToObject, organizationSchema } from "./schemas";
@@ -60,6 +61,8 @@ export async function createOrganizationAction(_prev: FormState, fd: FormData): 
   const values = { ...org, ...Object.fromEntries(Object.entries(admin).map(([k, v]) => [`admin.${k}`, v])) };
   let organizationId: string;
   let inviteUrl: string | null;
+  let invitationId: string | null;
+  let emailStatus = "skipped";
   try {
     const actor = await platformActor();
     const parsedOrg = organizationSchema.safeParse(org);
@@ -73,7 +76,10 @@ export async function createOrganizationAction(_prev: FormState, fd: FormData): 
         values,
       };
     }
-    ({ organizationId, inviteUrl } = await createOrganization(actor, parsedOrg.data, parsedAdmin.data));
+    ({ organizationId, inviteUrl, invitationId } = await createOrganization(actor, parsedOrg.data, parsedAdmin.data));
+    if (inviteUrl && invitationId) {
+      emailStatus = await sendInviteEmail(actor, organizationId, { id: invitationId, url: inviteUrl, ...parsedAdmin.data, role: "ADMIN" });
+    }
   } catch (e) {
     return toState(e, values, "", { email: "admin.email" });
   }
@@ -89,7 +95,7 @@ export async function createOrganizationAction(_prev: FormState, fd: FormData): 
     path: flashPath(organizationId),
   });
   revalidatePath("/plataforma/empresas");
-  redirect(flashPath(organizationId));
+  redirect(`${flashPath(organizationId)}?email=${emailStatus}`);
 }
 
 export async function updateOrganizationAction(id: string, _prev: FormState, fd: FormData): Promise<FormState> {
